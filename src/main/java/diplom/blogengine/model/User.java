@@ -22,10 +22,10 @@ public class User {
     @Column(nullable = false, updatable = false)
     private long id;
 
-    @Column(name = "is_moderator", columnDefinition = "TINYINT(1)", nullable = false)
+    @Column(name = "is_moderator", columnDefinition = "BIT(1)", nullable = false)
     private boolean isModerator;
 
-    @Column(name = "reg_time", nullable = false)
+    @Column(name = "reg_time", columnDefinition = "DATETIME", nullable = false)
     private LocalDateTime regTime;
 
     @Column(length = 255, nullable = false)
@@ -46,15 +46,15 @@ public class User {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
-    private List<Post> posts = new ArrayList<>();
+    private List<Post> posts;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
-    private List<PostVote> votes = new ArrayList<>();
+    private List<PostVote> votes;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.LAZY)
-    private List<PostComment> comments = new ArrayList<>();
+    private List<PostComment> comments;
 }

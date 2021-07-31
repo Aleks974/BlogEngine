@@ -1,16 +1,10 @@
 package diplom.blogengine.model;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import javax.persistence.*;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
+@Data
 @Entity
 @Table(name = "global_settings")
 public class GlobalSetting {
@@ -19,8 +13,9 @@ public class GlobalSetting {
     @Column(nullable = false, updatable = false)
     private long id;
 
-    @Column(length = 255, nullable = false)
-    private String code;
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "ENUM('MULTIUSER_MODE', 'POST_PREMODERATION', 'STATISTICS_IS_PUBLIC')", length = 255, nullable = false, unique = true)
+    private SettingsCode code;
 
     @Column(length = 255, nullable = false)
     private String name;

@@ -1,17 +1,12 @@
 package diplom.blogengine.model;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 import org.hibernate.procedure.spi.ParameterRegistrationImplementor;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
+@Data
 @Entity
 @Table(name = "post_comments")
 public class PostComment {
@@ -31,4 +26,11 @@ public class PostComment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "POSTCOMMENTS_USER_ID_FK"), nullable = false)
     private User user;
+
+    @Column(columnDefinition = "DATETIME", nullable = false)
+    private LocalDateTime time;
+
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String text;
 }

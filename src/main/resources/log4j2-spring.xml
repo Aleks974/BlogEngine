@@ -19,18 +19,60 @@
                 <TimeBasedTriggeringPolicy />
             </Policies>
         </RollingFile>
+        <RollingFile name="errors"
+                     fileName="./logs/spring-boot-logger-error-log4j2.log"
+                     filePattern="./logs/$${date:yyyy-MM}/spring-boot-logger-error-log4j2-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout>
+                <pattern>%d %p %C{1.} [%t] %m%n</pattern>
+            </PatternLayout>
+            <Policies>
+                <!-- rollover on startup, daily and when the file reaches
+                    10 MegaBytes -->
+                <OnStartupTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="10 MB" />
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </RollingFile>
+        <RollingFile name="migration"
+                     fileName="./logs/spring-boot-logger-migration-log4j2.log"
+                     filePattern="./logs/$${date:yyyy-MM}/spring-boot-logger-migration-log4j2-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout>
+                <pattern>%d %p %C{1.} [%t] %m%n</pattern>
+            </PatternLayout>
+            <Policies>
+                <!-- rollover on startup, daily and when the file reaches
+                    10 MegaBytes -->
+                <OnStartupTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="10 MB" />
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
         <!-- LOG everything at INFO level -->
         <Root level="info">
-            <AppenderRef ref="console" level="info" />
-            <AppenderRef ref="rollingfile" level="trace" />
+            <AppenderRef ref="console" level="debug" />
+            <AppenderRef ref="rollingfile" level="debug" />
+            <AppenderRef ref="errors" level="warn" />
         </Root>
-        <logger name="diplom.blogengine" level="trace" additivity="false">
+        <logger name="org.hibernate" level="info" additivity="false">
             <appender-ref ref="console" />
             <appender-ref ref="rollingfile" />
+            <AppenderRef ref="errors" level="warn" />
         </logger>
+        <logger name="org.flywaydb" level="info" additivity="false">
+            <appender-ref ref="console" />
+            <appender-ref ref="migration" />
+        </logger>
+        <!--        <logger name="diplom.blogengine" level="info" additivity="false">-->
+        <!--            <appender-ref ref="console" />-->
+        <!--            <appender-ref ref="rollingfile" />-->
+        <!--        </logger>-->
+        <!--        <logger name="diplom.blogengine.controller.ApiGeneralController" level="trace" additivity="false">-->
+        <!--            <appender-ref ref="console" />-->
+        <!--            <appender-ref ref="rollingfile" />-->
+        <!--        </logger>-->
     </Loggers>
 
 </Configuration>

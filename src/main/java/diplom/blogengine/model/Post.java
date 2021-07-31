@@ -1,20 +1,13 @@
 package diplom.blogengine.model;
 
-import diplom.blogengine.ModerationStatus;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
+@Data
 @Entity
 @Table(name = "posts")
 public class Post {
@@ -23,7 +16,7 @@ public class Post {
     @Column(nullable = false, updatable = false)
     private long id;
 
-    @Column(name = "is_active", columnDefinition = "TINYINT(1)", nullable = false)
+    @Column(name = "is_active", columnDefinition = "BIT(1)", nullable = false)
     private boolean isActive;
 
     @Enumerated(EnumType.STRING)
@@ -38,7 +31,7 @@ public class Post {
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name="POSTS_USER_ID_FK"), nullable = false)
     private User user;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "DATETIME", nullable = false)
     private LocalDateTime time;
 
     @Column(length = 255, nullable = false)
@@ -53,7 +46,7 @@ public class Post {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "post", fetch = FetchType.LAZY)
-    private List<PostVote> votes = new ArrayList<>();
+    private List<PostVote> votes;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
@@ -61,10 +54,10 @@ public class Post {
     @JoinTable(name = "tag2post",
                joinColumns = { @JoinColumn(name = "post_id", foreignKey = @ForeignKey(name = "TAG2POST_POST_ID_FK")) },
                inverseJoinColumns = { @JoinColumn(name = "tag_id", foreignKey = @ForeignKey(name = "TAG2POST_TAG_ID_FK")) } )
-    private List<Tag> tags = new ArrayList<>();
+    private List<Tag> tags;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "post", fetch = FetchType.LAZY)
-    private List<PostComment> comments = new ArrayList<>();
+    private List<PostComment> comments;
 }

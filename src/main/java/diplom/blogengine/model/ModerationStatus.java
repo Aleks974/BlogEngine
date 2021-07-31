@@ -1,4 +1,4 @@
-package diplom.blogengine;
+package diplom.blogengine.model;
 
 public enum ModerationStatus {
     NEW,

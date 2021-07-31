@@ -27,5 +27,5 @@ public class Tag {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @ManyToMany(fetch = FetchType.LAZY, mappedBy = "tags")
-    private List<Post> posts = new ArrayList<>();
+    private List<Post> posts;
 }
