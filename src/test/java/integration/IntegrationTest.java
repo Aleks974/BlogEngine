@@ -1,3 +1,5 @@
+package integration;
+
 import diplom.blogengine.Application;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = Application.class)
-public class IntegrationStartingTest {
+public class IntegrationTest {
     @Autowired
     private TestRestTemplate testRestTemplate;
 
@@ -24,7 +26,6 @@ public class IntegrationStartingTest {
         testURL = "http://localhost:" + port + "/";
     }
 
-    @Test
     public void getIndex_thenStatusOK200() {
         ResponseEntity<String> response = testRestTemplate.getForEntity(testURL, String.class);
         Assertions.assertEquals(response.getStatusCode(), HttpStatus.OK);

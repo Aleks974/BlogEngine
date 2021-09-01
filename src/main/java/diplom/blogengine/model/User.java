@@ -1,19 +1,16 @@
 package diplom.blogengine.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
+@Data
 @Entity
 @Table(name = "users")
 public class User {
@@ -34,9 +31,13 @@ public class User {
     @Column(length = 255, nullable = false)
     private String email;
 
+    @ToString.Exclude
+    @JsonIgnore
     @Column(length = 255, nullable = false)
     private String password;
 
+    @ToString.Exclude
+    @JsonIgnore
     @Column(length = 255, nullable = true)
     private String code;
 
@@ -45,16 +46,19 @@ public class User {
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     private List<Post> posts;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     private List<PostVote> votes;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.LAZY)
     private List<PostComment> comments;
 }

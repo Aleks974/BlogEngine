@@ -1,18 +1,14 @@
 package diplom.blogengine.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 
 import javax.persistence.*;
-import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
-@ToString
-@EqualsAndHashCode
+@Data
 @Entity
 @Table(name = "tags")
 public class Tag {
@@ -21,11 +17,12 @@ public class Tag {
     @Column(nullable = false, updatable = false)
     private long id;
 
-    @Column(length = 255, nullable = false)
+    @Column(length = 255, unique = true, nullable = false)
     private String name;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY, mappedBy = "tags")
     private List<Post> posts;
 }

@@ -1,5 +1,6 @@
 package diplom.blogengine.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.hibernate.procedure.spi.ParameterRegistrationImplementor;
 
@@ -23,6 +24,8 @@ public class PostComment {
     @JoinColumn(name = "post_id", foreignKey = @ForeignKey(name = "POSTCOMMENTS_POST_ID_FK"), nullable = false)
     private Post post;
 
+    @ToString.Exclude
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "POSTCOMMENTS_USER_ID_FK"), nullable = false)
     private User user;

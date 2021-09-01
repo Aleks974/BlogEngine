@@ -61,6 +61,11 @@
             <appender-ref ref="rollingfile" />
             <AppenderRef ref="errors" level="warn" />
         </logger>
+        <logger name="org.springframework" level="info" additivity="false">
+            <appender-ref ref="console" />
+            <appender-ref ref="rollingfile" />
+            <AppenderRef ref="errors" level="warn" />
+        </logger>
         <logger name="org.flywaydb" level="info" additivity="false">
             <appender-ref ref="console" />
             <appender-ref ref="migration" />
