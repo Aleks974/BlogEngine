@@ -1,10 +1,8 @@
 package diplom.blogengine.config;
 
-import diplom.blogengine.service.sort.SortField;
 import lombok.Builder;
 import lombok.Value;
 
-import java.util.Map;
 import java.util.TimeZone;
 
 @Value
@@ -18,5 +16,5 @@ public class BlogSettings {
     private String copyrightFrom;
     private TimeZone serverTimeZone;
     private String hashAlgorithm;
-    private Map<String, SortField> postSortModes;
+    private int captchaDeleteTimeout;
 }

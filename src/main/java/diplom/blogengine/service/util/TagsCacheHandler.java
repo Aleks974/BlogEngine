@@ -8,7 +8,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Component
 public class TagsCacheHandler {
     private final String queryKeyPrefix = "query_";
     private final String queryAllKeyPrefix = "all";

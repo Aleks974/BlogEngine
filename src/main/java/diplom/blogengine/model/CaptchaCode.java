@@ -20,6 +20,6 @@ public class CaptchaCode {
     @Column(columnDefinition = "TINYTEXT", nullable = false)
     private String code;
 
-    @Column(name = "secret_code", columnDefinition = "TINYTEXT", nullable = false)
+    @Column(name = "secret_code", columnDefinition = "TINYTEXT", nullable = false, unique = true)
     private String secretCode;
 }

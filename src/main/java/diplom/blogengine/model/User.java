@@ -25,10 +25,10 @@ public class User {
     @Column(name = "reg_time", columnDefinition = "DATETIME", nullable = false)
     private LocalDateTime regTime;
 
-    @Column(length = 255, nullable = false)
+    @Column(length = 255, nullable = false, unique = true)
     private String name;
 
-    @Column(length = 255, nullable = false)
+    @Column(length = 255, nullable = false, unique = true)
     private String email;
 
     @ToString.Exclude
@@ -59,6 +59,6 @@ public class User {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @JsonIgnore
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.LAZY)
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "user")
     private List<PostComment> comments;
 }

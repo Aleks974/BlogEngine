@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     code VARCHAR(255),
     photo TEXT,
-PRIMARY KEY (id));
+PRIMARY KEY (id),
+UNIQUE (name),
+UNIQUE (email));
 
 CREATE TABLE IF NOT EXISTS posts (
     id BIGINT NOT NULL AUTO_INCREMENT,
@@ -49,7 +51,8 @@ PRIMARY KEY (id));
 CREATE TABLE IF NOT EXISTS tags (
     id BIGINT NOT NULL AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
-PRIMARY KEY (id));
+PRIMARY KEY (id),
+UNIQUE (name));
 
 CREATE TABLE IF NOT EXISTS tag2post (
     post_id BIGINT NOT NULL,
@@ -58,7 +61,7 @@ PRIMARY KEY (post_id, tag_id));
 
 CREATE TABLE IF NOT EXISTS captcha_codes (
     id BIGINT NOT NULL AUTO_INCREMENT,
-    code TINYTEXT NOT NULL,
-    secret_code TINYTEXT NOT NULL,
+    code VARCHAR(255) NOT NULL,
+    secret_code VARCHAR(255) NOT NULL,
     time DATETIME(6) NOT NULL,
 PRIMARY KEY (id));

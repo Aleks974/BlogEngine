@@ -6,6 +6,8 @@ import org.hibernate.procedure.spi.ParameterRegistrationImplementor;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.TimeZone;
 
 @Data
 @Entity
@@ -26,7 +28,7 @@ public class PostComment {
 
     @ToString.Exclude
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "POSTCOMMENTS_USER_ID_FK"), nullable = false)
     private User user;
 
@@ -36,4 +38,11 @@ public class PostComment {
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
+
+
+    public long getTimestamp(TimeZone timeZone) {
+        Objects.requireNonNull(timeZone);
+        LocalDateTime dateTime = Objects.requireNonNull(time, "Time is null for post " + id);
+        return dateTime.atZone(timeZone.toZoneId()).toEpochSecond();
+    }
 }

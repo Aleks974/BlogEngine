@@ -6,10 +6,10 @@ import java.util.Collections;
 import java.util.List;
 
 @Getter
-public class TagsResponse {
+public class MultipleTagsResponse {
     private final List<TagResponse> tags;
 
-    public TagsResponse(List<TagResponse> tags) {
+    public MultipleTagsResponse(List<TagResponse> tags) {
         this.tags = Collections.unmodifiableList(tags);
     }
 }

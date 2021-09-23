@@ -6,7 +6,7 @@ import lombok.Setter;
 // ToDo final, builder
 @Getter
 @Setter
-public class UserAuthInfoResponse {
+public class UserInfoAuthResponse {
     private int id;
     private String name;
     private String photo;

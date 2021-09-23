@@ -70,10 +70,10 @@
             <appender-ref ref="console" />
             <appender-ref ref="migration" />
         </logger>
-        <!--        <logger name="diplom.blogengine" level="info" additivity="false">-->
-        <!--            <appender-ref ref="console" />-->
-        <!--            <appender-ref ref="rollingfile" />-->
-        <!--        </logger>-->
+        <logger name="diplom.blogengine" level="debug" additivity="false">
+            <appender-ref ref="console" />
+            <appender-ref ref="rollingfile" />
+        </logger>
         <!--        <logger name="diplom.blogengine.controller.ApiGeneralController" level="trace" additivity="false">-->
         <!--            <appender-ref ref="console" />-->
         <!--            <appender-ref ref="rollingfile" />-->

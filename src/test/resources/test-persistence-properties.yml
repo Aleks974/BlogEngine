@@ -1,7 +1,8 @@
 show-sql: true
 hibernate.ddl-auto: none
-hibernate.dialect: org.hibernate.dialect.H2Dialect
+hibernate.dialect: config.ExtendedH2Dialect
+#hibernate.dialect: org.hibernate.dialect.H2Dialect
 datasource.driver-class-name: org.h2.Driver
-datasource.url: jdbc:h2:mem:db;DB_CLOSE_DELAY=-1
+datasource.url: jdbc:h2:mem:db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL
 datasource.username: sa
 datasource.password: sa

@@ -7,7 +7,9 @@ import diplom.blogengine.repository.TagRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
+import util.TestDataGenerator;
 
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -20,17 +22,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Sql(scripts = {"classpath:testdbsql/delete_tables.sql"},
         executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+@ActiveProfiles("test")
 public class TagRepositoryTest {
 
     @Autowired
-    TagRepository tagRepository;
+    private TagRepository tagRepository;
+
+    private TestDataGenerator testDataGenerator = new TestDataGenerator();
 
     @Test
     public void givenTag_WhenSaveAndRetrieveTag_thenOk() {
         // given
-        Tag tag = generateTag();
-        tag = tagRepository.save(tag);
-        tagRepository.flush();
+        Tag tag = testDataGenerator.generateTag();
+        tag = tagRepository.saveAndFlush(tag);
 
         // when
         Tag foundTag = tagRepository.findById(tag.getId()).get();
@@ -40,11 +44,6 @@ public class TagRepositoryTest {
         assertEquals(tag.getName(), foundTag.getName());
     }
 
-    private Tag generateTag(){
-        Tag tag = new Tag();
-        tag.setName("Тэг1");
 
-        return tag;
-    }
 
 }

@@ -8,6 +8,7 @@ import diplom.blogengine.repository.SettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -21,10 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Sql(scripts = {"classpath:testdbsql/delete_tables.sql"},
         executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+@ActiveProfiles("test")
 public class SettingsRepositoryTest {
 
     @Autowired
-    SettingsRepository settingsRepository;
+    private SettingsRepository settingsRepository;
 
     @Test
     public void getSetting_WhenSaveAndRetrieveSetting_thenOk() {

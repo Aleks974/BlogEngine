@@ -1,7 +1,7 @@
 package diplom.blogengine.service;
 
 import diplom.blogengine.api.response.TagResponse;
-import diplom.blogengine.api.response.TagsResponse;
+import diplom.blogengine.api.response.MultipleTagsResponse;
 import diplom.blogengine.api.response.mapper.TagsResponseMapper;
 import diplom.blogengine.model.dto.TagCountDto;
 import diplom.blogengine.repository.PostRepository;
@@ -31,8 +31,8 @@ public class TagsService implements ITagsService {
     }
 
     @Override
-    public TagsResponse getTagsData(String query) {
-        TagsResponse response;
+    public MultipleTagsResponse getTagsData(String query) {
+        MultipleTagsResponse response;
         List<TagCountDto> tagsDto;
         long maxTagCount = 0;
         if (query == null || query.isEmpty()) {
@@ -49,7 +49,7 @@ public class TagsService implements ITagsService {
             tagsCache.cacheQuery(query, tagsDto);
         }
 
-        long postsTotalCount = postRepository.getPostsCount();
+        long postsTotalCount = postRepository.getTotalPostsCount();
 
         if (tagsDto == null || tagsDto.isEmpty()) {
             response = tagsResponseMapper.emptyResponse();

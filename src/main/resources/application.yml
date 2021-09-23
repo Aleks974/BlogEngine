@@ -9,7 +9,7 @@ spring.datasource.password: RbM8u$slkomV5
 spring.jpa.show-sql: true
 spring.jpa.hibernate.ddl-auto: validate
 spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
-spring.jpa.flyway.enabled: false
+spring.flyway.enabled: true
 
 blog:
   title: DevPub
@@ -20,22 +20,7 @@ blog:
   copyrightFrom: 2005
   serverTimeZone: Europe/Moscow
   hashAlgorithm: md5
-  postSortModes:
-    RECENT:
-        fieldName: time
-        direction: DESC
-    POPULAR:
-        fieldName: "COUNT(c.id)"
-        direction: DESC
-        sortUnsafe: true
-    BEST:
-        fieldName: "COUNT(v.id)"
-        direction: DESC
-        sortUnsafe: true
-    EARLY:
-        fieldName: time
-        direction: ASC
-
+  captchaDeleteTimeout: 3600
 
     #logging:
     #level:

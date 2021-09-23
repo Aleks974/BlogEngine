@@ -8,9 +8,9 @@ public class AuthCheckResponse {
     private final boolean result;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private final UserAuthInfoResponse userAuthInfoResponse;
+    private final UserInfoAuthResponse userAuthInfoResponse;
 
-    public AuthCheckResponse(Boolean result, UserAuthInfoResponse userAuthInfoResponse) {
+    public AuthCheckResponse(Boolean result, UserInfoAuthResponse userAuthInfoResponse) {
         this.result = result;
         this.userAuthInfoResponse = userAuthInfoResponse;
     }
