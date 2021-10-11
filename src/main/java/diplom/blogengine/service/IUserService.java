@@ -5,4 +5,5 @@ import diplom.blogengine.api.response.RegisterUserResponse;
 
 public interface IUserService {
     RegisterUserResponse registerUser(UserDataRequest newUserData);
+
 }

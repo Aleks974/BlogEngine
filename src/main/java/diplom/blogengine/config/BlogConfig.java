@@ -1,6 +1,8 @@
 package diplom.blogengine.config;
 
 import diplom.blogengine.service.util.*;
+import diplom.blogengine.service.util.cache.GlobalSettingsCacheHandler;
+import diplom.blogengine.service.util.cache.TagsCacheHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -55,6 +57,12 @@ public class BlogConfig {
     public TagsCacheHandler tagsCacheHandler() throws Exception {
         return new TagsCacheHandler();
     }
+
+    @Bean
+    public GlobalSettingsCacheHandler globalSettingsCacheHandler() throws Exception {
+        return new GlobalSettingsCacheHandler();
+    }
+
 
     @Bean
     public DdosAtackDefender ddosAtackDefender() throws Exception {

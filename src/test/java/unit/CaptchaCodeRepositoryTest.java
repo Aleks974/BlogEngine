@@ -12,6 +12,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import util.TestDataGenerator;
 
 import javax.persistence.EntityManager;
 import java.time.LocalDateTime;
@@ -36,12 +38,16 @@ public class CaptchaCodeRepositoryTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    private TestDataGenerator testDataGenerator = new TestDataGenerator();
+
     @Test
     public void givenCaptchaCode_WhenSaveCaptchaCode_thenOk() {
         // given
-        CaptchaCode captchaCode = generateCaptchaCode();
-        captchaCode = captchaCodeRepository.save(captchaCode);
-        captchaCodeRepository.flush();
+        CaptchaCode captchaCode = testDataGenerator.generateCaptchaCode();
+        captchaCode = captchaCodeRepository.saveAndFlush(captchaCode);
 
         // when
         CaptchaCode foundCaptchaCode = entityManager.find(CaptchaCode.class, captchaCode.getId());
@@ -53,33 +59,22 @@ public class CaptchaCodeRepositoryTest {
 
 
     @Test
-    public void givenCaptchaCode_WhenRetrieveCaptchaCode_thenOk() {
+    public void givenCaptchaCode_WhenRetrieveCode_thenOk() {
         // given
-        CaptchaCode captchaCode = generateCaptchaCode();
-        captchaCodeRepository.saveAndFlush(captchaCode);
+        CaptchaCode captchaCode = testDataGenerator.generateCaptchaCode();
+        transactionTemplate.execute(tx -> {
+            entityManager.persist(captchaCode);
+            tx.flush();
+            return null;
+        });
+        entityManager.detach(captchaCode);
 
         // when
-        CaptchaCode foundCaptchaCode = captchaCodeRepository.findById(captchaCode.getId()).orElse(null);
+        String code  = captchaCodeRepository.findCodeBySecret(captchaCode.getSecretCode());
 
         // then
-        assertNotNull(foundCaptchaCode);
-        assertEquals(captchaCode.getCode(), foundCaptchaCode.getCode());
-    }
-
-    @Transactional
-    private void saveCaptchaCode(CaptchaCode captchaCode) {
-        //entityManager.getTransaction().begin();
-        //entityManager.persist(captchaCode);
-        //entityManager.getTransaction().commit();
-    }
-
-    private CaptchaCode generateCaptchaCode(){
-        CaptchaCode captchaCode = new CaptchaCode();
-        captchaCode.setCode("123");
-        captchaCode.setSecretCode("");
-        captchaCode.setTime(LocalDateTime.now());
-
-        return captchaCode;
+        assertNotNull(code);
+        assertEquals(captchaCode.getCode(), code);
     }
 
 }

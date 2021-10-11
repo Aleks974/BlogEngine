@@ -1,4 +1,4 @@
-package diplom.blogengine.service.sort;
+package diplom.blogengine.service;
 
 public enum PostSortMode {
     RECENT,

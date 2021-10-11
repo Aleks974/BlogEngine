@@ -19,7 +19,7 @@ public class UserDataRequest {
      @NotBlank
      @Size(max = MAX_STRING_FIELD_LENGTH)
      @Email
-     private String email;
+     private String email; // ToDo customConstrainValidator Email
 
      @NotBlank
      @Size(max = MAX_STRING_FIELD_LENGTH)

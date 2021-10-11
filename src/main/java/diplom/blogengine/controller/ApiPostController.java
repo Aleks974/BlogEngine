@@ -1,9 +1,12 @@
 package diplom.blogengine.controller;
 
-import diplom.blogengine.service.sort.PostSortMode;
+import diplom.blogengine.security.IAuthenticationService;
+import diplom.blogengine.service.IUserService;
+import diplom.blogengine.service.MyPostStatus;
+import diplom.blogengine.service.PostSortMode;
 import diplom.blogengine.service.IPostService;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.validator.constraints.Length;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -13,6 +16,7 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.PositiveOrZero;
 import javax.validation.constraints.Size;
+import java.security.Principal;
 
 @Slf4j
 @RestController
@@ -22,13 +26,16 @@ public class ApiPostController {
     private final String DEFAULT_LIMIT = "10";
     private final int MAX_LIMIT = 100;
     private final String DEFAULT_MODE = "RECENT";
+    private final String DEFAULT_STATUS = "PUBLISHED";
     private final int MAX_QUERY_LENGTH = 100;
     private final int DATE_LENGTH = 10;
 
     private final IPostService postService;
+    private final IAuthenticationService authService;
 
-    public ApiPostController(IPostService postService) {
+    public ApiPostController(IPostService postService, IAuthenticationService authService) {
         this.postService = postService;
+        this.authService = authService;
     }
 
     @GetMapping("/api/post")
@@ -88,6 +95,19 @@ public class ApiPostController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getPostDataById(id));
+    }
+
+    @GetMapping("/api/post/my")
+    public ResponseEntity<?> getMyPosts(@RequestParam(required = false, defaultValue = DEFAULT_OFFSET) @PositiveOrZero int offset,
+                                        @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) @PositiveOrZero @Max(MAX_LIMIT) int limit,
+                                        @RequestParam(required = false, defaultValue = DEFAULT_STATUS) MyPostStatus status) {
+        if (!authService.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(postService.getMyPostsData(offset, limit, status));
     }
 
     @GetMapping("/api/post/test")

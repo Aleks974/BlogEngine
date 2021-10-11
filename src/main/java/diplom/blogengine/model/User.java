@@ -9,6 +9,7 @@ import lombok.ToString;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Entity
@@ -25,9 +26,13 @@ public class User {
     @Column(name = "reg_time", columnDefinition = "DATETIME", nullable = false)
     private LocalDateTime regTime;
 
+    @ToString.Exclude
+    @JsonIgnore
     @Column(length = 255, nullable = false, unique = true)
     private String name;
 
+    @ToString.Exclude
+    @JsonIgnore
     @Column(length = 255, nullable = false, unique = true)
     private String email;
 
@@ -35,6 +40,15 @@ public class User {
     @JsonIgnore
     @Column(length = 255, nullable = false)
     private String password;
+
+    @ToString.Exclude
+    @JsonIgnore
+    @ManyToMany(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @JoinTable(name = "users_roles",
+                joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id", foreignKey = @ForeignKey(foreignKeyDefinition = "FOREIGN KEY (user_id) REFERENCES `users` (`id`)")),
+                inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id", foreignKey = @ForeignKey(foreignKeyDefinition = "FOREIGN KEY (role_id) REFERENCES `roles` (`id`)"))
+    )
+    private Set<Role> roles;
 
     @ToString.Exclude
     @JsonIgnore

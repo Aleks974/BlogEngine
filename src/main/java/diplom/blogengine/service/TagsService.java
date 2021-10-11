@@ -6,12 +6,14 @@ import diplom.blogengine.api.response.mapper.TagsResponseMapper;
 import diplom.blogengine.model.dto.TagCountDto;
 import diplom.blogengine.repository.PostRepository;
 import diplom.blogengine.repository.TagRepository;
-import diplom.blogengine.service.util.TagsCacheHandler;
+import diplom.blogengine.service.util.cache.TagsCacheHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class TagsService implements ITagsService {
 
@@ -32,6 +34,8 @@ public class TagsService implements ITagsService {
 
     @Override
     public MultipleTagsResponse getTagsData(String query) {
+        log.debug("enter getTagsData()");
+
         MultipleTagsResponse response;
         List<TagCountDto> tagsDto;
         long maxTagCount = 0;
@@ -60,6 +64,8 @@ public class TagsService implements ITagsService {
     }
 
     private List<TagResponse> getTagResponseList(List<TagCountDto> tagsDto, long maxTagCount, long postsTotalCount) {
+        log.debug("enter getTagResponseList()");
+
         double kMaxNormalized = getKMaxNormalized(maxTagCount, postsTotalCount);
         return tagsDto.stream()
                 .map(t -> new TagResponse(t.getName(), getNormalizedWeight(t.getCount(), postsTotalCount, kMaxNormalized)))
@@ -67,6 +73,8 @@ public class TagsService implements ITagsService {
     }
 
     private double getKMaxNormalized(long maxTagCount, long postsTotalCount) {
+        log.trace("enter getKMaxNormalized()");
+
         double result;
         if (maxTagCount == 0 | postsTotalCount == 0) {
             result = 0;
@@ -77,6 +85,8 @@ public class TagsService implements ITagsService {
     }
 
     private double getNormalizedWeight(double count, long postsTotalCount, double kMaxNormalized) {
+        log.trace("enter getNormalizedWeight()");
+
         double result;
         if (postsTotalCount == 0) {
             result = 0;

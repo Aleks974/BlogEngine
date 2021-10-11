@@ -1,3 +1,9 @@
+-- roles
+
+INSERT INTO roles (name)
+VALUES ('ROLE_ADMIN'),
+('ROLE_USER');
+
 -- users
 
 INSERT INTO users (id, is_moderator, reg_time, name, email, password)
@@ -5,13 +11,21 @@ VALUES (1, true, '2021-08-10 12:00:00', 'moderator', 'admin@blogengine.ru', 'pyL
 (2, false, '2021-08-10 13:00:00', 'user1', 'user1@blogengine.ru', 'wVctBUJNDssqZexqgq6svw=='),
 (3, false, '2021-08-10 14:00:00', 'user2', 'user2@blogengine.ru', 'Ovx5tZf4inJSjoZM+BhW0g==');
 
+-- users_roles
+
+INSERT INTO users_roles (user_id, role_id)
+VALUES (1, 1),
+(2, 2),
+(3, 2);
+
+
 -- posts
 
-INSERT INTO posts (id, is_active, moderation_status, moderator_id, user_id, time, title, text, view_count)
-VALUES (1, true, 'NEW', 1, 2, '2021-08-10 12:00:00', 'Пост1', 'Текст1', 0),
-(2, true, 'ACCEPTED', 1, 3, '2021-08-11 13:00:00', 'Пост2', 'Текст для поиска2', 0),
-(3, true, 'ACCEPTED', 1, 3, '2021-08-12 13:00:00', 'Пост3', 'Текст для поиска3', 0),
-(4, true, 'ACCEPTED', 1, 1, '2021-08-12 13:05:00', 'Пост4', 'Текст4', 0);;
+INSERT INTO posts (id, is_active, moderation_status, moderator_id, user_id, time, title, text, announce, view_count)
+VALUES (1, true, 'NEW', 1, 2, '2021-08-10 12:00:00', 'Пост1', 'Текст1', 'Анонс1', 0),
+(2, true, 'ACCEPTED', 1, 3, '2021-08-11 13:00:00', 'Пост2', 'Текст для поиска2', 'Анонс2', 1),
+(3, true, 'ACCEPTED', 1, 3, '2021-08-12 13:00:00', 'Пост3', 'Текст для поиска3', 'Анонс3', 0),
+(4, true, 'ACCEPTED', 1, 1, '2021-08-12 13:05:00', 'Пост4', 'Текст4', 'Анонс4', 0);
 
 -- post_comments
 

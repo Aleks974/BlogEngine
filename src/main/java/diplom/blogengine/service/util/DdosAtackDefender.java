@@ -1,15 +1,17 @@
 package diplom.blogengine.service.util;
 
-import org.springframework.stereotype.Component;
-
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class DdosAtackDefender {
     private final int SEC_IN_MINUTE = 60;
     private final int MAX_CAPTCHA_REQUESTS = 20;
-    private final Map<String, List<LocalDateTime>> captchaRequestsIpCache = new HashMap<>();
+    private final ConcurrentMap<String, List<LocalDateTime>> captchaRequestsIpCache = new ConcurrentHashMap<>();
 
 
     public boolean validateCaptchaRequest(HttpServletRequest request) {

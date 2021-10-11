@@ -5,7 +5,6 @@ import diplom.blogengine.model.Post;
 import diplom.blogengine.model.PostComment;
 import diplom.blogengine.model.Tag;
 import diplom.blogengine.model.User;
-import diplom.blogengine.service.util.ContentHelper;
 import diplom.blogengine.service.util.TimestampHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,12 +18,10 @@ import java.util.stream.Collectors;
 public class PostsResponseMapper {
     private final Object lock = new Object();
     private final TimestampHelper timestampHelper;
-    private final ContentHelper contentHelper;
     private volatile MultiplePostsResponse emptyResponse;
 
-    public PostsResponseMapper(TimestampHelper timestampHelper, ContentHelper contentHelper) {
+    public PostsResponseMapper(TimestampHelper timestampHelper) {
         this.timestampHelper = timestampHelper;
-        this.contentHelper = contentHelper;
     }
 
     public MultiplePostsResponse emptyMultiplePostsResponse() {
@@ -86,7 +83,7 @@ public class PostsResponseMapper {
                 .timestamp(timestampHelper.toTimestampAtServerZone(post.getTime()))
                 .user(userInfoResponse)
                 .title(title)
-                .announce(post.getAnnounce(contentHelper))
+                .announce(post.getAnnounce())
                 .likeCount(likeCount)
                 .dislikeCount(dislikeCount)
                 .commentCount(commentCount)

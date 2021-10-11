@@ -19,6 +19,16 @@ PRIMARY KEY (id),
 UNIQUE (name),
 UNIQUE (email));
 
+CREATE TABLE IF NOT EXISTS roles (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+PRIMARY KEY (id));
+
+CREATE TABLE IF NOT EXISTS users_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+PRIMARY KEY (user_id, role_id));
+
 CREATE TABLE IF NOT EXISTS posts (
     id BIGINT NOT NULL AUTO_INCREMENT,
     is_active BIT(1) NOT NULL,
@@ -28,6 +38,7 @@ CREATE TABLE IF NOT EXISTS posts (
     time DATETIME NOT NULL,
     title VARCHAR(255) NOT NULL,
     text TEXT NOT NULL,
+    announce VARCHAR(255) NOT NULL,
     view_count INTEGER NOT NULL,
 PRIMARY KEY (id));
 
@@ -64,4 +75,5 @@ CREATE TABLE IF NOT EXISTS captcha_codes (
     code VARCHAR(255) NOT NULL,
     secret_code VARCHAR(255) NOT NULL,
     time DATETIME(6) NOT NULL,
-PRIMARY KEY (id));
+PRIMARY KEY (id),
+UNIQUE(secret_code));

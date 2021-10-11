@@ -3,7 +3,6 @@ package diplom.blogengine.service;
 import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.api.response.CalendarPostsResponse;
 import diplom.blogengine.api.response.MultiplePostsResponse;
-import diplom.blogengine.service.sort.PostSortMode;
 
 public interface IPostService {
     MultiplePostsResponse getPostsData(int offset, int limit, PostSortMode mode);
@@ -19,4 +18,7 @@ public interface IPostService {
     SinglePostResponse getPostDataById(long id);
 
     void test();
+
+    MultiplePostsResponse getMyPostsData(int offset, int limit, MyPostStatus status);
+
 }

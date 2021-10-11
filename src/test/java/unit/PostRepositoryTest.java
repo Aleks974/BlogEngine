@@ -48,6 +48,7 @@ public class PostRepositoryTest {
         // then
         assertNotNull(foundPost);
         assertEquals(givenPost.getTitle(), foundPost.getTitle());
+        assertEquals(givenPost.getAnnounce(), foundPost.getAnnounce());
     }
 
 }

@@ -51,7 +51,7 @@ public class ApiGeneralControllerTest {
 
     @Test
     public void whenGetSettings_thenOk() throws Exception {
-        final boolean MULTIUSER_MODE = false;
+        final boolean MULTIUSER_MODE = true;
         final boolean POST_PREMODERATION = true;
         final boolean STATISTICS_IS_PUBLIC = true;
         mvc.perform(get("/api/settings"))

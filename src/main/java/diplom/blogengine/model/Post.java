@@ -15,10 +15,6 @@ import java.util.TimeZone;
 @Entity
 @Table(name = "posts")
 public class Post {
-//    @Transient
-//    private final BlogSettings blogSettings;
-//    @Transient
-//    private final IContentProcessor contentProcessor;
     @Transient
     private static final int ANNOUNCE_LENGTH = 150;
 
@@ -39,7 +35,7 @@ public class Post {
     @JoinColumn(name = "moderator_id", foreignKey = @ForeignKey(name="POSTS_MODERATOR_ID_FK"), nullable = true)
     private User moderator;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name="POSTS_USER_ID_FK"), nullable = false)
     private User user;
 
@@ -52,6 +48,9 @@ public class Post {
     @ToString.Exclude
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
+
+    @Column(length = 255, nullable = false)
+    private String announce;
 
     @Column(name = "view_count", nullable = false)
     private int viewCount;
@@ -78,14 +77,14 @@ public class Post {
     private List<PostComment> comments;
 
 
-
+/*
     public String getAnnounce(ContentHelper contentHelper) {
         Objects.requireNonNull(contentHelper);
         String announce = Objects.requireNonNull(text, "Text is null for post " + id);
         String safeAnnounce = contentHelper.clearHtml(announce);
         int len = safeAnnounce.length();
         return safeAnnounce.substring(0, len > ANNOUNCE_LENGTH ? ANNOUNCE_LENGTH : len);
-    }
+    }*/
 
 
 }

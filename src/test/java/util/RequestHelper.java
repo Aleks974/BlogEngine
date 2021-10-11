@@ -17,10 +17,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RequestHelper {
-    public static  <T> T getRequest(String resourceUrl,
-                             Class<T> responseClazz,
-                             AssertFunctional assertFunction,
-                             TestRestTemplate testRestTemplate) throws IOException {
+    public static  <T> T sendGetRequest(String resourceUrl,
+                                        Class<T> responseClazz,
+                                        AssertFunctional assertFunction,
+                                        TestRestTemplate testRestTemplate) throws IOException {
         RestTemplateBuilder builder = new RestTemplateBuilder()
                                             .additionalMessageConverters(testRestTemplate.getRestTemplate().getMessageConverters());
         TestRestTemplate testRestTemplateLocal = new TestRestTemplate(builder);
@@ -31,12 +31,12 @@ public class RequestHelper {
         return response.getBody();
     }
 
-    public static <T, V> V postRequestJson(String resourceUrl,
-                                           String resourceJson,
-                                           Class<T> requestClazz,
-                                           Class<V> responseClazz,
-                                           AssertFunctional assertFunction,
-                                           TestRestTemplate testRestTemplate) throws IOException {
+    public static <T, V> V sendPostRequestJson(String resourceUrl,
+                                               String resourceJson,
+                                               Class<T> requestClazz,
+                                               Class<V> responseClazz,
+                                               AssertFunctional assertFunction,
+                                               TestRestTemplate testRestTemplate) throws IOException {
         RestTemplateBuilder builder = new RestTemplateBuilder()
                 .additionalMessageConverters(testRestTemplate.getRestTemplate().getMessageConverters());
         TestRestTemplate testRestTemplateLocal = new TestRestTemplate(builder);

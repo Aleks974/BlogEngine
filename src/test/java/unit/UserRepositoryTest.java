@@ -54,14 +54,12 @@ public class UserRepositoryTest {
     public void givenUser_WhenSaveAndFindByEmail_thenOk() {
         // given
         User user = testDataGenerator.generateUser();
-        user = userRepository.save(user);
-        userRepository.flush();
+        user = userRepository.saveAndFlush(user);
 
         // when
-        Long actualUserId = userRepository.findUserIdByEmail(user.getEmail());
+        long actualUserId = userRepository.findUserIdByEmail(user.getEmail()).get();
 
         // then
-        assertNotNull(actualUserId);
         assertEquals(user.getId(), actualUserId);
     }
 
@@ -73,10 +71,9 @@ public class UserRepositoryTest {
         userRepository.flush();
 
         // when
-        Long actualUserId = userRepository.findUserIdByName(user.getName());
+        long actualUserId = userRepository.findUserIdByName(user.getName()).get();
 
         // then
-        assertNotNull(actualUserId);
         assertEquals(user.getId(), actualUserId);
     }
 

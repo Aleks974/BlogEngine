@@ -9,7 +9,9 @@ import diplom.blogengine.service.util.CaptchaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.rmi.server.UID;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -35,26 +37,22 @@ public class CaptchaService implements ICaptchaService {
         log.debug("enter generateCaptchaDataAndDeleteOld()");
 
         String code = captchaGenerator.genRandomString();
-        String encodedCaptchaStr = generateCaptchaString(code);
-        long captchaId = saveCaptcha(code);
+        String encodedCaptchaString = generateCaptchaString(code);
+        String secretCode = UUID.randomUUID().toString();
+
+        CaptchaCode captchaCode = new CaptchaCode();
+        captchaCode.setCode(code);
+        captchaCode.setSecretCode(secretCode);
+        captchaCode.setTime(LocalDateTime.now());
+        captchaCodeRepository.saveAndFlush(captchaCode);
+
         deleteOldCaptchas();
 
-        return responsesMapper.captchaResponse(String.valueOf(captchaId), encodedCaptchaStr);
+        return responsesMapper.captchaResponse(secretCode, encodedCaptchaString);
     }
 
     private String generateCaptchaString(String text) {
         return IMAGE_CONTENT_TYPE.concat(", ").concat(captchaGenerator.genCaptchaEncoded(text));
-    }
-
-    private long saveCaptcha(String code) {
-        log.debug("enter saveCaptcha()");
-
-        CaptchaCode captchaCode = new CaptchaCode();
-        captchaCode.setCode(code);
-        captchaCode.setSecretCode("");
-        captchaCode.setTime(LocalDateTime.now());
-        captchaCode = captchaCodeRepository.save(captchaCode);
-        return captchaCode.getId();
     }
 
     private void deleteOldCaptchas() {

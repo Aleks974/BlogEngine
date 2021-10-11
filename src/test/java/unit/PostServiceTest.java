@@ -50,9 +50,11 @@ public class PostServiceTest {
         final long TEST_LIKE_COUNT = 23;
         final long TEST_DISLIKE_COUNT = 4;
         Post testPost = testDataGenerator.generatePost();
+        final long AUTH_USER_ID = 0;
+        final boolean IS_MODERATOR = false;
         Object[] mockPostData = {testPost, null, TEST_LIKE_COUNT, TEST_DISLIKE_COUNT};
 
-        Mockito.when(postRepository.findPostById(TEST_POST_ID)).thenReturn(Collections.singletonList(mockPostData));
+        Mockito.when(postRepository.findPostById(TEST_POST_ID, AUTH_USER_ID, IS_MODERATOR)).thenReturn(Collections.singletonList(mockPostData));
         SinglePostResponse response = postService.getPostDataById(TEST_POST_ID);
 
         assertNotNull(response);

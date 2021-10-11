@@ -3,50 +3,33 @@ package integration;
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
 import diplom.blogengine.api.request.UserDataRequest;
-import diplom.blogengine.api.response.AuthCheckResponse;
+import diplom.blogengine.api.response.AuthResponse;
 import diplom.blogengine.api.response.CaptchaResponse;
 import diplom.blogengine.api.response.RegisterUserResponse;
 import diplom.blogengine.model.CaptchaCode;
-import diplom.blogengine.model.User;
 import diplom.blogengine.repository.CaptchaCodeRepository;
 import diplom.blogengine.repository.UserRepository;
-import diplom.blogengine.service.CaptchaService;
-import diplom.blogengine.service.ICaptchaService;
 import diplom.blogengine.service.util.PasswordHelper;
-import jdk.jfr.ContentType;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
-import org.springframework.util.Assert;
-import util.AssertFunctional;
-import util.JsonParseHelper;
 import util.RequestHelper;
 import util.TestDataGenerator;
 
 
 import javax.persistence.EntityManager;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.function.Function;
 
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -94,14 +77,14 @@ public class ApiAuthControllerTest {
     @Test
     public void givenResourceUrl_whenSendGetAuthCheck_thenStatusOkAndResultFieldEquals() throws Exception {
         String resourceUrl = host + "/api/auth/check";
-        AuthCheckResponse authCheckResponse = RequestHelper.getRequest(resourceUrl,
-                                                        AuthCheckResponse.class,
+        AuthResponse authResponse = RequestHelper.sendGetRequest(resourceUrl,
+                                                        AuthResponse.class,
                                                         RequestHelper::assertResponseOkAndContentTypeJson,
                                                         testRestTemplate);
 
-        assertNotNull(authCheckResponse);
+        assertNotNull(authResponse);
         boolean expectedResultField = false;
-        boolean actualResultField = authCheckResponse.isResult();
+        boolean actualResultField = authResponse.isResult();
         assertEquals(expectedResultField, actualResultField);
     }
 
@@ -109,7 +92,7 @@ public class ApiAuthControllerTest {
     @Test
     public void givenResourceUrl_whenSendGetCaptcha_thenCaptchaSavedAndReturnedCorrect() throws Exception {
         String resourceUrl = host + "/api/auth/captcha";
-        CaptchaResponse captchaResponse = RequestHelper.getRequest(resourceUrl,
+        CaptchaResponse captchaResponse = RequestHelper.sendGetRequest(resourceUrl,
                                                     CaptchaResponse.class,
                                                     RequestHelper::assertResponseOkAndContentTypeJson,
                                                     testRestTemplate);
@@ -117,8 +100,7 @@ public class ApiAuthControllerTest {
         assertNotNull(captchaResponse);
         String IMAGE_CONTENT_TYPE = "data:image/png;base64";
         assertTrue(captchaResponse.getImage().startsWith(IMAGE_CONTENT_TYPE));
-        long captchaId = Long.parseLong(captchaResponse.getSecret());
-        assertNotNull(captchaCodeRepository.findCodeById(captchaId));
+        assertNotNull(captchaCodeRepository.findCodeBySecret(captchaResponse.getSecret()));
 
     }
 
@@ -128,8 +110,8 @@ public class ApiAuthControllerTest {
         long usersCountBeforeReg = userRepository.count();
         CaptchaCode captchaCode = generateAndSaveCaptchaCode();
 
-        String resourceJson = testDataGenerator.generateUserDataRequestJson(captchaCode.getCode(), String.valueOf(captchaCode.getId()));
-        RegisterUserResponse registerUserResponse = RequestHelper.postRequestJson(resourceUrl,
+        String resourceJson = testDataGenerator.generateUserDataRequestJson(captchaCode.getCode(), captchaCode.getSecretCode());
+        RegisterUserResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
                                                                     resourceJson,
                                                                     UserDataRequest.class,
                                                                     RegisterUserResponse.class,
@@ -149,8 +131,8 @@ public class ApiAuthControllerTest {
         long usersCountBeforeReg = userRepository.count();
         CaptchaCode captchaCode = generateAndSaveCaptchaCode();
 
-        String resourceJson = testDataGenerator.generateUserDataRequestJson("wrong_code", String.valueOf(captchaCode.getId()));
-        RegisterUserResponse registerUserResponse = RequestHelper.postRequestJson(resourceUrl,
+        String resourceJson = testDataGenerator.generateUserDataRequestJson("wrong_code", captchaCode.getSecretCode());
+        RegisterUserResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
                                                                     resourceJson,
                                                                     UserDataRequest.class,
                                                                     RegisterUserResponse.class,

@@ -3,41 +3,54 @@ package diplom.blogengine.service;
 import diplom.blogengine.api.request.UserDataRequest;
 import diplom.blogengine.api.response.RegisterUserResponse;
 import diplom.blogengine.api.response.mapper.AuthResponsesMapper;
+import diplom.blogengine.exception.UserNotFoundException;
 import diplom.blogengine.model.User;
 import diplom.blogengine.repository.CaptchaCodeRepository;
+import diplom.blogengine.repository.PostRepository;
 import diplom.blogengine.repository.UserRepository;
-import diplom.blogengine.service.util.PasswordHelper;
+import diplom.blogengine.security.AuthenticationService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class UserService implements IUserService {
     private final static int MIN_PASSWORD_LENGTH = 6;
     private final UserRepository userRepository;
     private final CaptchaCodeRepository captchaCodeRepository;
+    private final PostRepository postRepository;
     private final AuthResponsesMapper responsesMapper;
-    private final PasswordHelper passwordHelper;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationService authenticationService;
 
     public UserService(UserRepository userRepository,
                        CaptchaCodeRepository captchaCodeRepository,
+                       AuthenticationService authenticationService,
+                       PostRepository postRepository,
                        AuthResponsesMapper responsesMapper,
-                       PasswordHelper passwordHelper) {
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.captchaCodeRepository = captchaCodeRepository;
+        this.postRepository = postRepository;
         this.responsesMapper = responsesMapper;
-        this.passwordHelper = passwordHelper;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationService = authenticationService;
+
     }
 
-
     @Override
-    public RegisterUserResponse registerUser(UserDataRequest userData) {
+    public RegisterUserResponse registerUser(UserDataRequest userDataRequest) {
+        log.debug("enter registerUser()");
+
         RegisterUserResponse resultResponse;
-        Map<String, String> errors = validateUserRegisterData(userData);
+        Map<String, String> errors = validateUserRegisterData(userDataRequest);
         if (errors.isEmpty()) {
-            userRepository.save(convertToUser(userData));
+            saveUser(convertDtoToUser(userDataRequest));
             resultResponse = responsesMapper.registerSuccess();
         } else {
             resultResponse = responsesMapper.registerFailure(errors);
@@ -45,56 +58,69 @@ public class UserService implements IUserService {
         return resultResponse;
     }
 
-    private User convertToUser(UserDataRequest userRequest) {
-        User newUser = new User();
-        newUser.setName(userRequest.getName());
-        newUser.setEmail(userRequest.getEmail());
-        newUser.setPassword(passwordHelper.generateHashEncode(userRequest.getPassword()));
-        newUser.setRegTime(LocalDateTime.now());
-        newUser.setModerator(false);
-        return newUser;
+    private User convertDtoToUser(UserDataRequest userDataRequest) {
+        log.debug("enter convertDtoToUser()");
+
+        User user = new User();
+        user.setName(userDataRequest.getName());
+        user.setEmail(userDataRequest.getEmail());
+        user.setPassword(passwordEncoder.encode(userDataRequest.getPassword()));
+        user.setRegTime(LocalDateTime.now());
+        user.setModerator(false);
+        return user;
     }
 
-    private Map<String, String> validateUserRegisterData(UserDataRequest userData) {
+    private User saveUser(User user) {
+        log.debug("enter saveUser()");
+
+        long id = user.getId();
+        if (id != 0 && !userRepository.existsById(id)) {
+            throw new UserNotFoundException("User not found with id = " + id);
+        }
+        return userRepository.save(user);
+    }
+
+    private Map<String, String> validateUserRegisterData(UserDataRequest userDataRequest) {
+        log.debug("enter validateUserRegisterData()");
+
         Map<String, String> errors = new HashMap<>();
-        if (existEmail(userData.getEmail())) {
+        if (existEmail(userDataRequest.getEmail())) {
             errors.put("email", "Этот e-mail уже зарегистрирован");
         }
-        if (existName(userData.getName())) {
+        if (existName(userDataRequest.getName())) {
             errors.put("name", "Имя указано неверно");
         }
-        if (isPasswordShort(userData.getPassword())) {
+        if (isPasswordShort(userDataRequest.getPassword())) {
             errors.put("password", "Пароль короче 6-ти символов");
         }
-        if (!checkCaptcha(userData.getCaptcha(), userData.getCaptchaSecret())) {
+        if (!checkCaptcha(userDataRequest.getCaptcha(), userDataRequest.getCaptchaSecret())) {
             errors.put("captcha", "Код с картинки введён неверно");
         }
         return errors;
     }
 
     private boolean existEmail(String email) {
-        Long id = userRepository.findUserIdByEmail(email);
-        return id != null && id > 0;
+        log.debug("enter existEmail()");
+
+        return userRepository.findUserIdByEmail(email).isPresent();
     }
 
     private boolean existName(String name) {
-        Long id = userRepository.findUserIdByName(name);
-        return id != null && id > 0;
+        log.debug("enter existName()");
+
+        return userRepository.findUserIdByName(name).isPresent();
     }
 
     private boolean isPasswordShort(String password) {
+        log.debug("enter isPasswordShort()");
+
         return password.length() > MIN_PASSWORD_LENGTH;
     }
 
-    private boolean checkCaptcha(String inputCode, String secret) {
-        long id;
-        try {
-            id = Long.parseLong(secret);
-        } catch (NumberFormatException ex) {
-            return false;
-        }
-        String code = captchaCodeRepository.findCodeById(id);
+    private boolean checkCaptcha(String inputCode, String secretCode) {
+        log.debug("enter checkCaptcha()");
+
+        String code = captchaCodeRepository.findCodeBySecret(secretCode);
         return code != null && code.equals(inputCode);
     }
-
 }

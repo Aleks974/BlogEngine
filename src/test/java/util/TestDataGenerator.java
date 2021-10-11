@@ -5,6 +5,8 @@ import diplom.blogengine.service.util.PasswordHelper;
 
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 
 public class TestDataGenerator {
     private PasswordHelper passwordHelper;
@@ -21,18 +23,24 @@ public class TestDataGenerator {
         post.setTime(LocalDateTime.now());
         post.setTitle("Название поста");
         post.setText("текст поста");
+        post.setAnnounce("Анонс");
         post.setViewCount(0);
 
         return post;
     }
 
     public User generateUser(){
+        Role role = new Role();
+        role.setName("ROLE_USER");
+
         User user = new User();
         user.setModerator(false);
         user.setRegTime(LocalDateTime.now());
         user.setName("vasya");
         user.setEmail("test@test.ru");
         user.setPassword(passwordHelper.generateHashEncode("password"));
+        user.setRoles(Collections.singleton(role));
+
         return user;
     }
 
@@ -46,9 +54,10 @@ public class TestDataGenerator {
 
     public CaptchaCode generateCaptchaCode() {
         String code = "testcode";
+        String secretCode = "testcode123";
         CaptchaCode captchaCode = new CaptchaCode();
         captchaCode.setCode(code);
-        captchaCode.setSecretCode("");
+        captchaCode.setSecretCode(secretCode);
         captchaCode.setTime(LocalDateTime.now());
         return captchaCode;
     }

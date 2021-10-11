@@ -1,17 +1,18 @@
 package diplom.blogengine.api.response;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.Value;
 
-// ToDo final, builder
-@Getter
-@Setter
+@Value
+@Builder
 public class UserInfoAuthResponse {
-    private int id;
+    private long id;
     private String name;
     private String photo;
     private String email;
     private boolean moderation;
-    private int moderationCount;
+    private long moderationCount;
     private boolean settings;
 }

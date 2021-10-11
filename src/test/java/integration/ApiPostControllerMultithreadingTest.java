@@ -5,7 +5,6 @@ import diplom.blogengine.Application;
 import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.repository.PostRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.hql.internal.classic.ParserHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +24,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -60,7 +58,7 @@ public class ApiPostControllerMultithreadingTest {
 
     @Test
     public void givenResourceUrl_whenSendGetPostByIdParallel_thenReturnedViewCountCorrect() throws Exception {
-        final long POST_ID = 2L;
+        final long POST_ID = 3L;
         final int PARALLEL_REQUEST_COUNT = 100;
         String resourceUrl = host + "/api/post/" + POST_ID;
 
@@ -68,7 +66,7 @@ public class ApiPostControllerMultithreadingTest {
         List<Future<SinglePostResponse>> listFutures = new ArrayList<>();
         for(int i = 0; i < PARALLEL_REQUEST_COUNT; i++) {
             listFutures.add(executorService.submit(() ->
-                    RequestHelper.getRequest(resourceUrl,
+                    RequestHelper.sendGetRequest(resourceUrl,
                             SinglePostResponse.class,
                             RequestHelper::assertResponseOkAndContentTypeJson,
                             testRestTemplate))

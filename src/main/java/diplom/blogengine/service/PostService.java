@@ -6,16 +6,21 @@ import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.api.response.mapper.PostsResponseMapper;
 import diplom.blogengine.exception.PostNotFoundException;
 import diplom.blogengine.exception.RequestParamDateParseException;
+import diplom.blogengine.model.ModerationStatus;
 import diplom.blogengine.model.Post;
 import diplom.blogengine.repository.PostRepository;
-import diplom.blogengine.service.sort.PostSortMode;
+import diplom.blogengine.security.AuthenticationService;
+import diplom.blogengine.security.UserDetailsExt;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.EntityListeners;
+import javax.persistence.EntityManager;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -28,21 +33,22 @@ import java.util.Objects;
 public class PostService implements IPostService {
     private final PostRepository postRepository;
     private final PostsResponseMapper postsResponseMapper;
+    private final AuthenticationService authService;
     private final int CURRENT_YEAR = LocalDate.now().getYear();
 
-    public PostService(PostRepository postRepository, PostsResponseMapper postsResponseMapper) {
+    public PostService(PostRepository postRepository, PostsResponseMapper postsResponseMapper, AuthenticationService authService) {
         this.postRepository = postRepository;
         this.postsResponseMapper = postsResponseMapper;
+        this.authService = authService;
     }
 
     @Override
     public MultiplePostsResponse getPostsData(int offset, int limit, PostSortMode mode) {
         log.debug("enter getPostsData()");
 
-        Pageable pageRequest;
         List<Object[]> postsDataList;
         long totalPostsCount;
-        pageRequest = getPageRequest(offset, limit, mode);
+        Pageable pageRequest = getPageRequestWithSort(offset, limit, mode);
         if (mode == PostSortMode.BEST) {
             postsDataList = postRepository.findPostsDataOrderByLikesCount(pageRequest);
             totalPostsCount = postRepository.getTotalPostsCountExcludeDislikes();
@@ -58,31 +64,49 @@ public class PostService implements IPostService {
     }
 
 
-    private Pageable getPageRequest(int offset, int limit, PostSortMode mode) {
-        log.debug("enter getPageRequest()");
+    @Override
+    public MultiplePostsResponse getMyPostsData(int offset, int limit, MyPostStatus myPostStatus) {
+        log.debug("enter getMyPostsData(): {}, {}, {}", offset, limit, myPostStatus);
 
-        Pageable pageRequest;
-        final String TIME_FIELD = "time";
-        //final String LIKE_COUNT_FIELD = "like_count";
-        //final String COMMENT_COUNT_FIELD = "comment_count";
-
-        if (mode == PostSortMode.BEST || mode == PostSortMode.POPULAR) {
-            pageRequest = PageRequest.of(offset, limit);
-        } else {
-            Sort sort;
-            if (mode == PostSortMode.EARLY) {
-                sort = Sort.by(Sort.Direction.ASC, TIME_FIELD);
-            } else if (mode == PostSortMode.RECENT) {
-                sort = Sort.by(Sort.Direction.DESC, TIME_FIELD);
-            } else {
-                sort = Sort.by(Sort.Direction.ASC, TIME_FIELD);
-            }
-            pageRequest = PageRequest.of(offset, limit, sort);
+        long authUserId = authService.getAuthenticatedUserId();
+        if (authUserId == 0) {
+            return postsResponseMapper.emptyMultiplePostsResponse();
         }
+        Pageable pageRequest = getPageRequest(offset, limit);
+        ModerationStatus moderationStatus = myPostStatus.getModerationStatus();
+        List<Object[]> postsDataList;
+        long totalPostsCount;
 
-        return pageRequest;
+        log.debug("getMyPostsData(): userId: {}, isActive: {}, moderationStatus: {}", authUserId, myPostStatus.isActiveFlag(), moderationStatus );
+
+        if (myPostStatus.isActiveFlag()) {
+            postsDataList = postRepository.findMyPostsData(pageRequest, authUserId, moderationStatus);
+            totalPostsCount = postRepository.getTotalMyPostsCount(authUserId, moderationStatus);
+        } else {
+            postsDataList = postRepository.findMyPostsNotActiveData(pageRequest, authUserId);
+            totalPostsCount = postRepository.getTotalMyPostsNotActiveCount(authUserId);
+        }
+        return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
     }
 
+    private Pageable getPageRequestWithSort(int offset, int limit, PostSortMode mode) {
+        log.debug("enter getPageRequest()");
+
+        if (mode == PostSortMode.BEST || mode == PostSortMode.POPULAR) {
+            return getPageRequest(offset, limit);
+        } else {
+            final String SORTING_FIELD_TIME = "time";
+            Sort.Direction direction = Sort.Direction.DESC;
+            if (mode == PostSortMode.EARLY) {
+                direction = Sort.Direction.ASC;
+            }
+            return PageRequest.of(offset, limit, Sort.by(direction, SORTING_FIELD_TIME));
+        }
+    }
+
+    private Pageable getPageRequest(int offset, int limit) {
+        return PageRequest.of(offset, limit);
+    }
 
     public MultiplePostsResponse getPostsDataByQuery(int offset, int limit, String query) {
         log.debug("enter getPostsDataByQuery()");
@@ -91,7 +115,7 @@ public class PostService implements IPostService {
         if (query == null || query.isEmpty()) {
             response = getPostsData(offset, limit, PostSortMode.RECENT);
         } else {
-            Pageable pageRequestWithSort = getPageRequest(offset, limit, PostSortMode.RECENT);
+            Pageable pageRequestWithSort = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
             List<Object[]> postsDataList = postRepository.findPostsByQuery(query, pageRequestWithSort);
             long totalPostsCount = postRepository.getTotalPostsCountByQuery(query);
             response = postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
@@ -112,7 +136,7 @@ public class PostService implements IPostService {
             throw new RequestParamDateParseException("Input param date is invalid");
         }
 
-        Pageable pageRequest = getPageRequest(offset, limit, PostSortMode.RECENT);
+        Pageable pageRequest = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
         List<Object[]> postsDataList = postRepository.findPostsByDate(date, pageRequest);
         long totalPostsCount = postRepository.getTotalPostsCountByDate(date);
 
@@ -122,7 +146,7 @@ public class PostService implements IPostService {
     public MultiplePostsResponse getPostsDataByTag(int offset, int limit, String tag) {
         log.debug("enter getPostsDataByTag()");
 
-        Pageable pageRequest = getPageRequest(offset, limit, PostSortMode.RECENT);
+        Pageable pageRequest = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
         List<Object[]> postsDataList = postRepository.findPostsByTag(tag, pageRequest);
         long totalPostsCount = postRepository.getTotalPostsCountByTag(tag);
 
@@ -141,13 +165,18 @@ public class PostService implements IPostService {
         return postsResponseMapper.calendarPostsResponse(calendarYears, calendarPostsData) ;
     }
 
-    public synchronized SinglePostResponse getPostDataById(long id) {
+    public SinglePostResponse getPostDataById(long postId) {
         log.debug("enter getSinglePostById()");
 
-        // ToDo count if authenticated user is moderator or author
-        postRepository.updatePostViewCount(id);
+        long authUserId = 0;
+        boolean authUserIsModerator = false;
+        UserDetailsExt authUser = authService.getAuthenticatedUser();
+        if (authUser != null) {
+            authUserId = authUser.getId();
+            authUserIsModerator = authUser.isModerator();
+        }
 
-        Object[] postData = getSinglePostData(id);
+        Object[] postData = getSinglePostData(postId, authUserId, authUserIsModerator);
         final int POST_INDEX = 0;
         final int LIKECOUNT_INDEX = 2;
         final int DISLIKECOUNT_INDEX = 3;
@@ -158,13 +187,18 @@ public class PostService implements IPostService {
         initializeComments(post);
         initializeTags(post);
 
+        if (authUserId == 0 || (!authUserIsModerator && authUserId != post.getUser().getId())) {
+            updatePostViewCount(post);
+        }
         return postsResponseMapper.singlePostResponse(post, likeCount, dislikeCount);
     }
 
-    private Object[] getSinglePostData(long id) {
-        List<Object[]> postDataList = postRepository.findPostById(id);
+    private Object[] getSinglePostData(long postId, long authUserId, boolean authUserIsModerator) {
+        log.debug("enter getSinglePostData()");
+
+        List<Object[]> postDataList = postRepository.findPostById(postId, authUserId, authUserIsModerator);
         if (postDataList == null || postDataList.isEmpty()) {
-            throw new PostNotFoundException("Post not found");
+            throw new PostNotFoundException("Post " + postId + " not found");
         }
         Object[] postData = postDataList.get(0);
         Objects.requireNonNull(postData, "postData is null");
@@ -173,6 +207,11 @@ public class PostService implements IPostService {
             throw new IllegalArgumentException("size of postData is not 4 ");
         }
         return postData;
+    }
+
+    private void updatePostViewCount(Post post) {
+        log.debug("enter getSinglePostById()");
+        postRepository.updatePostViewCount(post.getId());
     }
 
     private void initializeComments(Post post) {
@@ -188,10 +227,34 @@ public class PostService implements IPostService {
     }
 
 
+    @Autowired
+    private EntityManager em;
     public void test() {
         PageRequest p = PageRequest.of(0, 10);
-        Page<Post> pp = postRepository.findPostsOrderByLikes(p);
-        System.out.println(pp.getContent().get(0).getComments().size());
+
+        // post , post.user, post.comments выбираются тремя запросами select:
+        //Page<Post> pp = postRepository.findPostsOrderByLikes(p);
+        //pp.getContent().get(0).getComments().size();
+
+
+
+        // post и post.user выбираются двумя запросами select: с Join fetch не компиллируется
+        //Page<Post> pp = postRepository.findPostTest(p);
+
+        // post и post.user выбираются двумя запросами select:
+        //Post post = em.createQuery("SELECT p FROM Post p WHERE p.id = 1", Post.class).getSingleResult();
+
+        // post и post.user выбираются двумя запросами select:
+        // Post post = em.createQuery("SELECT p FROM Post p JOIN p.user WHERE p.id = 1", Post.class).getSingleResult();
+
+        // post и post.user выбираются одним запросом select (Post.user fetchType=Eager):
+        Post post  = em.find(Post.class, 1L);
+
+        // post и post.user выбираются одним запросом select (Post.user fetchType=Eager):
+        //Post post = em.createQuery("SELECT p FROM Post p JOIN FETCH p.user WHERE p.id = 1", Post.class).getSingleResult();
+
+        // post и post.user, post.comments, votes, tags выбираются одним запросом select (для всех ассоциаций в Post стоит fetchType=Eager, тип Set):
+        //Post post  = em.find(Post.class, 1L);
 
     }
 }

@@ -26,4 +26,9 @@ public interface CaptchaCodeRepository extends JpaRepository<CaptchaCode, Long> 
             "WHERE c.time < :time ", nativeQuery = true)
     int deleteOlderThan(LocalDateTime time);
 
+    @Query(value = "SELECT c.code " +
+            "FROM captcha_codes c " +
+            "WHERE c.secret_code = :secretCode " +
+            "LIMIT 1", nativeQuery = true)
+    String findCodeBySecret(@Param("secretCode") String secretCode);
 }

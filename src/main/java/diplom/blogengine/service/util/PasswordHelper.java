@@ -4,7 +4,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
-
+@Deprecated
 public class PasswordHelper {
     private final String hashAlgorithm;
     private final Base64.Encoder encoder = Base64.getEncoder();
