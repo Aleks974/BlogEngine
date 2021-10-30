@@ -1,38 +1,31 @@
 package diplom.blogengine.api.response.mapper;
 
-import diplom.blogengine.api.response.*;
-import diplom.blogengine.security.UserDetailsExt;
+import diplom.blogengine.api.response.AuthResponse;
+import diplom.blogengine.api.response.CaptchaResponse;
+import diplom.blogengine.api.response.LogoutResponse;
+import diplom.blogengine.api.response.UserInfoAuthResponse;
+import diplom.blogengine.model.User;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
 
 @Component
 public class AuthResponsesMapper {
-
-
-    public RegisterUserResponse registerFailure(Map<String, String> errors) {
-        return new RegisterUserResponse(false, errors);
-    }
-
-    public RegisterUserResponse registerSuccess() {
-        return new RegisterUserResponse(true);
-    }
+    private static final AuthResponse failAuthResponse = new AuthResponse(false);
 
     public CaptchaResponse captchaResponse(String secret, String captcha) {
         return new CaptchaResponse(secret, captcha);
     }
 
     public AuthResponse failAuthResponse() {
-        return new AuthResponse(false);
+        return failAuthResponse;
     }
 
-    public AuthResponse authResponse(UserDetailsExt userDetails, long moderationPostCount, boolean canEditSettings) {
+    public AuthResponse authResponse(User user, long moderationPostCount, boolean canEditSettings) {
         UserInfoAuthResponse userInfoResponse = UserInfoAuthResponse.builder()
-                                                .id(userDetails.getId())
-                                                .name(userDetails.getRealName())
-                                                .photo(userDetails.getPhoto())
-                                                .email(userDetails.getUsername())
-                                                .moderation(userDetails.isModerator())
+                                                .id(user.getId())
+                                                .name(user.getName())
+                                                .photo(user.getPhoto())
+                                                .email(user.getEmail())
+                                                .moderation(user.isModerator())
                                                 .moderationCount(moderationPostCount)
                                                 .settings(canEditSettings)
                                                 .build();

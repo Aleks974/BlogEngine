@@ -75,4 +75,13 @@ public class User {
     @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "user")
     private List<PostComment> comments;
+
+    public User() {
+
+    }
+
+    public User(long id) {
+        this.id = id;
+    }
+
 }

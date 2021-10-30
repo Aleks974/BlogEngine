@@ -1,45 +1,88 @@
 package diplom.blogengine.service;
 
+import diplom.blogengine.api.request.PostCommentDataRequest;
+import diplom.blogengine.api.request.PostDataRequest;
+import diplom.blogengine.api.request.PostModerationRequest;
+import diplom.blogengine.api.request.VoteDataRequest;
 import diplom.blogengine.api.response.CalendarPostsResponse;
 import diplom.blogengine.api.response.MultiplePostsResponse;
+import diplom.blogengine.api.response.ResultResponse;
 import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.api.response.mapper.PostsResponseMapper;
-import diplom.blogengine.exception.PostNotFoundException;
-import diplom.blogengine.exception.RequestParamDateParseException;
-import diplom.blogengine.model.ModerationStatus;
-import diplom.blogengine.model.Post;
+import diplom.blogengine.api.response.mapper.ResultResponseMapper;
+import diplom.blogengine.exception.*;
+import diplom.blogengine.model.*;
+import diplom.blogengine.repository.PostCommentRepository;
 import diplom.blogengine.repository.PostRepository;
-import diplom.blogengine.security.AuthenticationService;
+import diplom.blogengine.repository.PostVoteRepository;
+import diplom.blogengine.repository.TagRepository;
 import diplom.blogengine.security.UserDetailsExt;
+import diplom.blogengine.service.util.ContentHelper;
+import diplom.blogengine.service.util.TimestampHelper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityListeners;
 import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class PostService implements IPostService {
     private final PostRepository postRepository;
+    private final PostCommentRepository commentRepository;
+    private final TagRepository tagRepository;
+    private final PostVoteRepository postVoteRepository;
     private final PostsResponseMapper postsResponseMapper;
-    private final AuthenticationService authService;
+    private final ResultResponseMapper resultResponseMapper;
+    private final TimestampHelper timestampHelper;
+    private final ContentHelper contentHelper;
+    private final MessageSource messageSource;
+
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private final int CURRENT_YEAR = LocalDate.now().getYear();
 
-    public PostService(PostRepository postRepository, PostsResponseMapper postsResponseMapper, AuthenticationService authService) {
+    private static final String ANNOUNCE_MORE = "...";
+    private static final int POST_ANNOUNCE_LENGTH = 150;
+    private static final int TITLE_MIN_LENGTH = 3;
+    private static final int TITLE_MAX_LENGTH = 255;
+    private static final int TEXT_MIN_LENGTH = 50;
+    private static final int TEXT_MAX_LENGTH = 65000;
+    private static final int COMMENT_TEXT_MIN_LENGTH = 3;
+    private static final int COMMENT_TEXT_MAX_LENGTH = 65000;
+
+    public PostService(PostRepository postRepository,
+                       PostCommentRepository commentRepository,
+                       TagRepository tagRepository,
+                       PostVoteRepository postVoteRepository,
+                       TimestampHelper timestampHelper,
+                       ContentHelper contentHelper,
+                       PostsResponseMapper postsResponseMapper,
+                       ResultResponseMapper resultResponseMapper,
+                       MessageSource messageSource) {
         this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
+        this.tagRepository = tagRepository;
+        this.postVoteRepository = postVoteRepository;
+        this.timestampHelper = timestampHelper;
+        this.contentHelper = contentHelper;
         this.postsResponseMapper = postsResponseMapper;
-        this.authService = authService;
+        this.resultResponseMapper = resultResponseMapper;
+        this.messageSource = messageSource;
     }
 
     @Override
@@ -65,10 +108,13 @@ public class PostService implements IPostService {
 
 
     @Override
-    public MultiplePostsResponse getMyPostsData(int offset, int limit, MyPostStatus myPostStatus) {
+    public MultiplePostsResponse getMyPostsData(int offset, int limit, MyPostStatus myPostStatus, UserDetailsExt authUser) {
         log.debug("enter getMyPostsData(): {}, {}, {}", offset, limit, myPostStatus);
 
-        long authUserId = authService.getAuthenticatedUserId();
+        Objects.requireNonNull(myPostStatus, "myPostStatus is null");
+        Objects.requireNonNull(authUser, "authUser is null");
+
+        long authUserId = authUser.getId();
         if (authUserId == 0) {
             return postsResponseMapper.emptyMultiplePostsResponse();
         }
@@ -108,6 +154,7 @@ public class PostService implements IPostService {
         return PageRequest.of(offset, limit);
     }
 
+    @Override
     public MultiplePostsResponse getPostsDataByQuery(int offset, int limit, String query) {
         log.debug("enter getPostsDataByQuery()");
 
@@ -123,6 +170,7 @@ public class PostService implements IPostService {
         return response;
     }
 
+    @Override
     public MultiplePostsResponse getPostsDataByDate(int offset, int limit, String dateStr) {
         log.debug("enter getPostsDataByDate(): input offset: {}, limit: {}, dateStr: {}", offset, limit, dateStr);
 
@@ -143,6 +191,7 @@ public class PostService implements IPostService {
         return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
     }
 
+    @Override
     public MultiplePostsResponse getPostsDataByTag(int offset, int limit, String tag) {
         log.debug("enter getPostsDataByTag()");
 
@@ -153,6 +202,7 @@ public class PostService implements IPostService {
         return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
     }
 
+    @Override
     public CalendarPostsResponse getCalendarDataByYear(Integer year) {
         log.debug("enter getCalendarDataByYear()");
 
@@ -165,12 +215,12 @@ public class PostService implements IPostService {
         return postsResponseMapper.calendarPostsResponse(calendarYears, calendarPostsData) ;
     }
 
-    public SinglePostResponse getPostDataById(long postId) {
+    @Override
+    public SinglePostResponse getPostDataById(long postId, UserDetailsExt authUser) { // ToDo передачу в метод UserDetailExt вместо использования authServiec внутри
         log.debug("enter getSinglePostById()");
 
         long authUserId = 0;
         boolean authUserIsModerator = false;
-        UserDetailsExt authUser = authService.getAuthenticatedUser();
         if (authUser != null) {
             authUserId = authUser.getId();
             authUserIsModerator = authUser.isModerator();
@@ -198,7 +248,7 @@ public class PostService implements IPostService {
 
         List<Object[]> postDataList = postRepository.findPostById(postId, authUserId, authUserIsModerator);
         if (postDataList == null || postDataList.isEmpty()) {
-            throw new PostNotFoundException("Post " + postId + " not found");
+            throw new PostNotFoundException(postId);
         }
         Object[] postData = postDataList.get(0);
         Objects.requireNonNull(postData, "postData is null");
@@ -226,11 +276,295 @@ public class PostService implements IPostService {
         }
     }
 
+    @Override
+    public MultiplePostsResponse getModerationPostsData(int offset, int limit,
+                                                        ModerationStatus status,
+                                                        UserDetailsExt authUser) {
+        log.debug("enter getModerationPostsData(): {}, {}, {}", offset, limit, status);
 
-    @Autowired
+        Objects.requireNonNull(status, "moderationStatus is null");
+        Objects.requireNonNull(status, "authUser is null");
+
+        long authUserId = authUser.getId();
+        Pageable pageRequest = getPageRequest(offset, limit);
+        List<Object[]> postsDataList = postRepository.findModerationPostsData(pageRequest, authUserId, status, status.toString());
+        long totalPostsCount = postRepository.getTotalModerationPostsCount(authUserId, status, status.toString()).orElse(0L);
+
+        return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
+    }
+
+    @Override
+    public ResultResponse newPost(PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled) {
+        log.debug("enter newPost()");
+
+        Objects.requireNonNull(postDataRequest, "postDataRequest is null");
+        Objects.requireNonNull(authUser, "authUser is null");
+
+        clearTags(postDataRequest);
+        Map<String, String> errors = validatePostData(postDataRequest);
+        if (!errors.isEmpty()) {
+            return resultResponseMapper.failure(errors);
+        }
+
+        Post post = convertDtoToPost(postDataRequest);
+        User user = entityManager.getReference(User.class, authUser.getId());
+        post.setUser(user);
+
+        ModerationStatus moderationStatus;
+        if (!moderationIsEnabled || authUser.isModerator()) {
+            moderationStatus = ModerationStatus.ACCEPTED;
+        } else {
+            moderationStatus = ModerationStatus.NEW;
+        }
+        post.setModerationStatus(moderationStatus);
+
+        postRepository.save(post);
+
+        return resultResponseMapper.success();
+    }
+
+    @Modifying
+    @Transactional
+    @Override
+    public ResultResponse updatePost(long id, PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled) {
+        log.debug("enter updatePost(): id: {}", id);
+
+        Objects.requireNonNull(postDataRequest, "postDataRequest is null");
+        Objects.requireNonNull(authUser, "authUser is null");
+
+        // ToDo проверить статус attached или detached
+        // user, Moderator инициализирован?
+        Post updatedPost = postRepository.findById(id).orElseThrow(() -> new PostNotFoundException(id));
+        long authorId = updatedPost.getUser().getId();
+        if (!authUser.isModerator() && authUser.getId() != authorId ) {
+            throw new PostAccessDeniedException();
+        }
+
+        clearTags(postDataRequest);
+        Map<String, String> errors = validatePostData(postDataRequest);
+        if (!errors.isEmpty()) {
+            return resultResponseMapper.failure(errors);
+        }
+
+        Post post = convertDtoToPost(postDataRequest);
+        post.setId(id);
+        post.setUser(updatedPost.getUser());
+        post.setViewCount(updatedPost.getViewCount());
+        post.setModerator(updatedPost.getModerator());
+        if (moderationIsEnabled && !authUser.isModerator()) {
+            post.setModerationStatus(ModerationStatus.NEW);
+        } else {
+            post.setModerationStatus(updatedPost.getModerationStatus());
+        }
+
+        postRepository.save(post);
+        return resultResponseMapper.success();
+    }
+
+    private void clearTags(PostDataRequest postDataRequest) {
+        postDataRequest.setTitle(contentHelper.clearAllTags(postDataRequest.getTitle()));
+        postDataRequest.setText(contentHelper.clearProhibitedTags(postDataRequest.getText()));
+    }
+
+    private Map<String, String> validatePostData(PostDataRequest postDataRequest) {
+        log.debug("enter validatePostData()");
+
+        Locale locale = Objects.requireNonNull(postDataRequest.getLocale(), "locale is null");
+
+        Map<String, String> errors = new HashMap<>();
+        errors.putAll(validateText(postDataRequest.getTitle(), "title", locale, TITLE_MIN_LENGTH, TITLE_MAX_LENGTH));
+        errors.putAll(validateText(postDataRequest.getText(), "text", locale, TEXT_MIN_LENGTH, TEXT_MAX_LENGTH));
+        return errors;
+    }
+
+    private Map<String, String> validateText(String content, String fieldName, Locale locale, int min, int max) {
+        Map<String, String> errors = new HashMap<>();
+        if (content.isBlank()) {
+            errors.put(fieldName, messageSource.getMessage(fieldName.concat(".isblank"), null, locale));
+        } else if (content.length() < min) {
+            errors.put(fieldName, messageSource.getMessage(fieldName.concat(".isshort"), null, locale));
+        } else if (content.length() > max) {
+            errors.put(fieldName, messageSource.getMessage(fieldName.concat(".islong"), null, locale));
+        }
+        return errors;
+    }
+
+    private Post convertDtoToPost(PostDataRequest postDataRequest) {
+        log.debug("enter convertDtoToPost()");
+
+        Post post = new Post();
+
+        long currentTimestamp =  timestampHelper.genCurrentTimestamp();
+        long timestamp = postDataRequest.getTimestamp();
+        if (timestamp < currentTimestamp ) {
+            timestamp = currentTimestamp;
+        }
+        post.setTime(timestampHelper.toLocalDateTimeAtServerZone(timestamp));
+
+        final int ACTIVE_VAL = 1;
+        post.setActive(postDataRequest.getActive() == ACTIVE_VAL);
+
+        post.setTitle(postDataRequest.getTitle());
+
+        Set<Tag> tags = null;
+        if (postDataRequest.getTags() != null) {
+            tags = postDataRequest.getTags().stream()
+                    .map((String t) -> getOrSaveNewTag(t))
+                    .collect(Collectors.toSet());
+        }
+        post.setTags(tags);
+
+        post.setText(postDataRequest.getText());
+
+        String clearedText = contentHelper.clearTags(post.getText());
+        String announce = clearedText.length() > POST_ANNOUNCE_LENGTH ?
+                clearedText.substring(0, POST_ANNOUNCE_LENGTH).concat(ANNOUNCE_MORE) : clearedText;
+        post.setAnnounce(announce);
+
+        return post;
+    }
+
+    private Tag getOrSaveNewTag(String t) {
+        String name = contentHelper.clearAllTags(t);
+        return tagRepository.findByName(name).orElseGet(() ->
+           tagRepository.save(new Tag(name))
+        );
+    }
+
+    @Override
+    public ResultResponse newComment(PostCommentDataRequest commentDataRequest, UserDetailsExt authUser, Locale locale) {
+        log.debug("enter newComment()");
+
+        Objects.requireNonNull(commentDataRequest);
+        Objects.requireNonNull(locale);
+        Objects.requireNonNull(authUser);
+
+        long postId = commentDataRequest.getPostId();
+        long parentId = commentDataRequest.getParentId();
+        validateCommentPostAndParent(postId, parentId);
+
+        clearTags(commentDataRequest);
+        Map<String, String> errors = validateText(commentDataRequest.getText(),
+                                    "commentText", locale, COMMENT_TEXT_MIN_LENGTH, COMMENT_TEXT_MAX_LENGTH);
+        if (!errors.isEmpty()) {
+            return resultResponseMapper.failure(errors);
+        }
+
+        PostComment comment = convertDtoToComment(commentDataRequest);
+        if (parentId > 0) {
+            PostComment parentComment = entityManager.getReference(PostComment.class, parentId);
+            comment.setParent(parentComment);
+        }
+        Post post = entityManager.getReference(Post.class, postId);
+        comment.setPost(post);
+
+        User user = entityManager.getReference(User.class, authUser.getId());
+        comment.setUser(user);
+
+        comment = commentRepository.save(comment);
+
+        return resultResponseMapper.success(comment.getId());
+    }
+
+    private void validateCommentPostAndParent(long postId, long parentId) {
+        if (postId <= 0) {
+            throw new InputParameterException("commentPostId.positive", "postId", postId);
+        }
+        postRepository.findPostId(postId).orElseThrow(() -> new InputParameterException("post.notFound", "postId", postId));
+
+        if (parentId < 0) {
+            throw new InputParameterException("commentParentId.positive", "parentId", parentId);
+
+        } else if (parentId > 0) {
+            Long parentCommentPostId = commentRepository.findPostIdByCommentId(parentId).orElseThrow(() ->
+                    new InputParameterException("comment.notFound", "parentId", parentId));
+
+            if (parentCommentPostId != postId) {
+                throw new InputParameterException("comment.illegalParams");
+            }
+        }
+    }
+
+
+    private void clearTags(PostCommentDataRequest commentDataRequest) {
+        commentDataRequest.setText(contentHelper.clearProhibitedTags(commentDataRequest.getText()));
+    }
+
+
+    private PostComment convertDtoToComment(PostCommentDataRequest commentDataRequest) {
+        PostComment comment = new PostComment();
+        comment.setTime(LocalDateTime.now());
+        comment.setText(commentDataRequest.getText());
+        return comment;
+    }
+
+    @Override
+    public ResultResponse newVote(VoteParameter voteParam,
+                                  VoteDataRequest voteDataRequest,
+                                  UserDetailsExt authUser,
+                                  Locale locale) {
+        log.debug("enter newVote()");
+
+        Objects.requireNonNull(voteDataRequest);
+        Objects.requireNonNull(locale);
+        Objects.requireNonNull(authUser);
+
+        long postId = voteDataRequest.getPostId();
+        postRepository.findPostId(postId).orElseThrow(() ->  new InputParameterException("post.notFound", "postId", postId));
+
+        int value = voteParam.getValue();
+        long authUserId = authUser.getId();
+        PostVote postVote = postVoteRepository.findByPostAndUserIds(postId, authUserId);
+        if (postVote == null) {
+            postVote = new PostVote();
+            postVote.setUser(entityManager.getReference(User.class, authUserId));
+            postVote.setPost(entityManager.getReference(Post.class, postId));
+        } else if (postVote.getValue() == value) {
+            return resultResponseMapper.failure();
+        }
+        postVote.setValue(value);
+        postVote.setTime(LocalDateTime.now());
+        postVoteRepository.save(postVote);
+
+        return resultResponseMapper.success();
+    }
+
+    @Override
+    public ResultResponse moderatePost(PostModerationRequest postModerationRequest, UserDetailsExt authUser) {
+        log.debug("enter moderatePost()");
+
+        Objects.requireNonNull(postModerationRequest, "postModerationRequest is null");
+        Objects.requireNonNull(authUser, "authUser is null");
+
+        long postId = postModerationRequest.getPostId();
+        Post postToModerate = postRepository.findActivePostById(postId).orElseThrow(() ->
+                    new InputParameterException("post.notFound", "postId", postId));
+
+        try {
+            ModerationStatus newStatus = postModerationRequest.getDecision().getModerationStatus();
+            ModerationStatus currentStatus = postToModerate.getModerationStatus();
+
+            if (newStatus != currentStatus) {
+                postToModerate.setModerationStatus(newStatus);
+                User moderator = entityManager.getReference(User.class, authUser.getId());
+                postToModerate.setModerator(moderator);
+                // ToDo проверить tags не обнулится? как обновлять только нужные поля?
+                postRepository.save(postToModerate);
+            }
+        } catch (Exception ex) {
+            return resultResponseMapper.failure();
+        }
+
+        return resultResponseMapper.success();
+
+    }
+
+
+    //////////////////////////////////////////
+ /*   @Autowired
     private EntityManager em;
     public void test() {
-        PageRequest p = PageRequest.of(0, 10);
+        //PageRequest p = PageRequest.of(0, 10);
 
         // post , post.user, post.comments выбираются тремя запросами select:
         //Page<Post> pp = postRepository.findPostsOrderByLikes(p);
@@ -248,7 +582,7 @@ public class PostService implements IPostService {
         // Post post = em.createQuery("SELECT p FROM Post p JOIN p.user WHERE p.id = 1", Post.class).getSingleResult();
 
         // post и post.user выбираются одним запросом select (Post.user fetchType=Eager):
-        Post post  = em.find(Post.class, 1L);
+       // Post post  = em.find(Post.class, 1L);
 
         // post и post.user выбираются одним запросом select (Post.user fetchType=Eager):
         //Post post = em.createQuery("SELECT p FROM Post p JOIN FETCH p.user WHERE p.id = 1", Post.class).getSingleResult();
@@ -256,5 +590,5 @@ public class PostService implements IPostService {
         // post и post.user, post.comments, votes, tags выбираются одним запросом select (для всех ассоциаций в Post стоит fetchType=Eager, тип Set):
         //Post post  = em.find(Post.class, 1L);
 
-    }
+    }*/
 }

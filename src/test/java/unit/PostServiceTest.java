@@ -55,7 +55,9 @@ public class PostServiceTest {
         Object[] mockPostData = {testPost, null, TEST_LIKE_COUNT, TEST_DISLIKE_COUNT};
 
         Mockito.when(postRepository.findPostById(TEST_POST_ID, AUTH_USER_ID, IS_MODERATOR)).thenReturn(Collections.singletonList(mockPostData));
-        SinglePostResponse response = postService.getPostDataById(TEST_POST_ID);
+
+        // ToDo
+        SinglePostResponse response = postService.getPostDataById(TEST_POST_ID, null);
 
         assertNotNull(response);
         assertEquals(testPost.getId(), response.getId());

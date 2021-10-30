@@ -2,10 +2,10 @@ package integration;
 
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
-import diplom.blogengine.api.request.UserDataRequest;
+import diplom.blogengine.api.request.UserRegisterDataRequest;
 import diplom.blogengine.api.response.AuthResponse;
 import diplom.blogengine.api.response.CaptchaResponse;
-import diplom.blogengine.api.response.RegisterUserResponse;
+import diplom.blogengine.api.response.ResultResponse;
 import diplom.blogengine.model.CaptchaCode;
 import diplom.blogengine.repository.CaptchaCodeRepository;
 import diplom.blogengine.repository.UserRepository;
@@ -24,6 +24,7 @@ import util.TestDataGenerator;
 
 
 import javax.persistence.EntityManager;
+import javax.swing.text.StyledEditorKit;
 
 import java.util.Map;
 
@@ -111,14 +112,14 @@ public class ApiAuthControllerTest {
         CaptchaCode captchaCode = generateAndSaveCaptchaCode();
 
         String resourceJson = testDataGenerator.generateUserDataRequestJson(captchaCode.getCode(), captchaCode.getSecretCode());
-        RegisterUserResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
+        ResultResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
                                                                     resourceJson,
-                                                                    UserDataRequest.class,
-                                                                    RegisterUserResponse.class,
+                                                                    UserRegisterDataRequest.class,
+                                                                    ResultResponse.class,
                                                                     RequestHelper::assertResponseOkAndContentTypeJson,
                                                                     testRestTemplate);
         assertNotNull(registerUserResponse);
-        assertThat(registerUserResponse.isResult(), equalTo(true));
+        assertThat(registerUserResponse.getResult().booleanValue(), equalTo(true));
 
         long usersCountAfterReg = userRepository.count();
         assertThat(usersCountAfterReg, equalTo(usersCountBeforeReg + 1));
@@ -132,14 +133,14 @@ public class ApiAuthControllerTest {
         CaptchaCode captchaCode = generateAndSaveCaptchaCode();
 
         String resourceJson = testDataGenerator.generateUserDataRequestJson("wrong_code", captchaCode.getSecretCode());
-        RegisterUserResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
+        ResultResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
                                                                     resourceJson,
-                                                                    UserDataRequest.class,
-                                                                    RegisterUserResponse.class,
+                                                                    UserRegisterDataRequest.class,
+                                                                    ResultResponse.class,
                                                                     RequestHelper::assertResponseOkAndContentTypeJson,
                                                                     testRestTemplate);
         assertNotNull(registerUserResponse);
-        assertThat(registerUserResponse.isResult(), equalTo(false));
+        assertThat(registerUserResponse.getResult().booleanValue(), equalTo(false));
 
         long usersCountAfterReg = userRepository.count();
         assertThat(usersCountAfterReg, equalTo(usersCountBeforeReg));

@@ -12,7 +12,7 @@ public class TestDataGenerator {
     private PasswordHelper passwordHelper;
 
     public TestDataGenerator() {
-        passwordHelper = new PasswordHelper("md5");
+        passwordHelper = new PasswordHelper();
     }
 
     public Post generatePost(){

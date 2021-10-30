@@ -19,7 +19,7 @@ public class PostComment {
     private long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id", foreignKey = @ForeignKey(name = "POSTCOMMENTS_PARENT_ID_FK"))
+    @JoinColumn(name = "parent_id", foreignKey = @ForeignKey(name = "POSTCOMMENTS_PARENT_ID_FK"), nullable = true)
     private PostComment parent;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -39,10 +39,4 @@ public class PostComment {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
 
-
-    public long getTimestamp(TimeZone timeZone) {
-        Objects.requireNonNull(timeZone);
-        LocalDateTime dateTime = Objects.requireNonNull(time, "Time is null for post " + id);
-        return dateTime.atZone(timeZone.toZoneId()).toEpochSecond();
-    }
 }

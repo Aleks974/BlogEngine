@@ -13,6 +13,8 @@ public class BlogProperties {
     private String copyright;
     private String copyrightFrom;
     private String serverTimeZone;
-    private String hashAlgorithm;
     private int captchaDeleteTimeout;
+    private String prohibitedTags;
+    private String uploadDir;
+    private String maxUploadSize;
 }

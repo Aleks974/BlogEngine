@@ -6,7 +6,7 @@ import diplom.blogengine.api.response.mapper.TagsResponseMapper;
 import diplom.blogengine.model.dto.TagCountDto;
 import diplom.blogengine.repository.PostRepository;
 import diplom.blogengine.repository.TagRepository;
-import diplom.blogengine.service.util.cache.TagsCacheHandler;
+import diplom.blogengine.service.cache.TagsCacheHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

@@ -11,6 +11,18 @@ spring.jpa.hibernate.ddl-auto: validate
 spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
 spring.flyway.enabled: true
 
+
+#spring.web.resources.static-locations: classpath:\static\,classpath:\upload\
+#spring.servlet.multipart.location: ${java.io.tmpdir}
+# Spring Boot 1.4
+#spring.http.multipart.max-file-size: 10MB
+#spring.http.multipart.max-request-size: 10MB
+spring.servlet.multipart.enabled: true
+spring.servlet.multipart.max-file-size: ${blog.maxUploadSize}
+spring.servlet.multipart.max-request-size: ${blog.maxUploadSize}
+
+
+
 blog:
   title: DevPub
   subtitle: Рассказы разработчиков
@@ -19,8 +31,10 @@ blog:
   copyright: Дмитрий Сергеев
   copyrightFrom: 2005
   serverTimeZone: Europe/Moscow
-  hashAlgorithm: md5
   captchaDeleteTimeout: 3600
+  prohibitedTags: script|embedded|link|header|object|html|body
+  uploadDir: upload # загружаем в папку откуда запущено приложение
+  maxUploadSize: 5MB
 
     #logging:
     #level:

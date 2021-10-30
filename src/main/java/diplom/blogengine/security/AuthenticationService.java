@@ -4,10 +4,14 @@ import diplom.blogengine.api.request.UserLoginRequest;
 import diplom.blogengine.api.response.AuthResponse;
 import diplom.blogengine.api.response.LogoutResponse;
 import diplom.blogengine.api.response.mapper.AuthResponsesMapper;
+import diplom.blogengine.exception.UserNotFoundException;
+import diplom.blogengine.model.User;
 import diplom.blogengine.repository.PostRepository;
+import diplom.blogengine.repository.UserRepository;
 import diplom.blogengine.service.IPostService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -25,13 +29,16 @@ public class AuthenticationService implements IAuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final AuthResponsesMapper responsesMapper;
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
     public AuthenticationService(AuthenticationManager authenticationManager,
                                  AuthResponsesMapper responsesMapper,
-                                 PostRepository postRepository) {
+                                 PostRepository postRepository,
+                                 UserRepository userRepository) {
         this.authenticationManager = authenticationManager;
         this.responsesMapper = responsesMapper;
         this.postRepository = postRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -41,6 +48,9 @@ public class AuthenticationService implements IAuthenticationService {
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(username, password);
         Authentication auth = authenticationManager.authenticate(authToken);
+        if (auth == null) {
+            throw new BadCredentialsException("bad credentials");
+        }
         SecurityContext sc = SecurityContextHolder.getContext();
         sc.setAuthentication(auth);
 
@@ -55,24 +65,27 @@ public class AuthenticationService implements IAuthenticationService {
         UserDetailsExt authUser = getAuthenticated();
         if (authUser == null) {
             return responsesMapper.failAuthResponse();
-        } else {
-            long moderationPostCount;
-            boolean canEditSettings;
-            if (authUser.isModerator()) {
-                moderationPostCount = postRepository.getModerationPostCount();
-                canEditSettings = true;
-            } else {
-                moderationPostCount = 0;
-                canEditSettings = false;
-            }
-            return responsesMapper.authResponse(authUser, moderationPostCount, canEditSettings);
         }
+
+        long authId = authUser.getId();
+        User user = userRepository.findById(authId).orElseThrow(() -> new UserNotFoundException(authId));
+        long moderationPostCount;
+        boolean canEditSettings;
+        if (user.isModerator()) {
+            moderationPostCount = postRepository.getModerationPostCount();
+            canEditSettings = true;
+        } else {
+            moderationPostCount = 0;
+            canEditSettings = false;
+        }
+        return responsesMapper.authResponse(user, moderationPostCount, canEditSettings);
+
     }
 
     @Override
     public void logoutUser(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws Exception {
         log.debug("enter logoutUser()");
-
+        // ToDo invalidate session, delete cookies JSEESIONID, rememberme
         httpRequest.logout();
     }
 

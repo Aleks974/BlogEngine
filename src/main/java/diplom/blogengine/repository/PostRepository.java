@@ -2,8 +2,10 @@ package diplom.blogengine.repository;
 
 import diplom.blogengine.model.ModerationStatus;
 import diplom.blogengine.model.Post;
+import diplom.blogengine.model.dto.StatPostsDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
@@ -25,6 +28,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                                  "JOIN p.user u " +
                                                  "LEFT JOIN p.votes v " +
                                                  "LEFT JOIN p.comments c ";
+    static final String JPQL_SELECT_MODERATION_POSTS_DATA = JPQL_SELECT_POSTS_DATA +
+                                                            "JOIN p.moderator m ";
+    static final String JPQL_SELECT_STATISTICS_DATA = "SELECT new diplom.blogengine.model.dto.StatPostsDto(COUNT(distinct p.id), SUM(p.viewCount), MIN(p.time)) " +
+                                                        "FROM Post p " +
+                                                        "JOIN p.user u ";
+
 
     static final String JPQL_JOIN_P_TAGS = " JOIN p.tags t ";
     static final String JPQL_JOIN_P_VOTES = " LEFT JOIN p.votes v ";
@@ -34,6 +43,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     static final String WHERE_USERID_AND_NOTACTIVE = "WHERE p.user_id = :authUserId AND p.is_active = 0 ";
     static final String JPQL_WHERE_USERID_AND_ACTIVE_AND_STATUS = "WHERE u.id = :authUserId AND p.isActive = 1 AND p.moderationStatus = :moderationStatus ";
     static final String WHERE_USERID_AND_ACTIVE_AND_STATUS = "WHERE p.user_id = :authUserId AND p.is_active = 1 AND p.moderation_status = :moderationStatus ";
+    static final String JPQL_WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS = "WHERE p.isActive = 1 AND ((:moderationStatusStr = 'NEW' OR m.id = :authUserId) AND p.moderationStatus = :moderationStatus) ";
+    static final String WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS = "WHERE p.is_active = 1 AND ((:moderationStatusStr = 'NEW' OR p.moderator_id = :authUserId) AND p.moderation_status = :moderationStatus) ";
     static final String WHERE_SEARCH_BY_PARAM_QUERY = " AND (p.title LIKE %:query% OR p.text LIKE %:query%) ";
     static final String WHERE_SEARCH_BY_PARAM_DATE = " AND DATE(p.time) = :date ";
     static final String WHERE_SEARCH_BY_PARAM_TAG = " AND t.name = :tag ";
@@ -174,38 +185,45 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     long getModerationPostCount();
 
 
+    @Query(value = "SELECT p.id " +
+            "FROM posts p " +
+            "WHERE p.id = :id AND p.is_active = 1 AND p.moderation_status = 'ACCEPTED' AND p.time <= NOW() " +
+            "LIMIT 1", nativeQuery = true)
+    Optional<Long> findPostId(@Param("id") long id);
 
-    //////////// TEST 1
-    @Query("SELECT p " +
+
+    @EntityGraph(attributePaths = {"user", "moderator"})
+    @Query(value = "SELECT p " +
             "FROM Post p " +
-            "LEFT JOIN User u ON u.id = p.user " +
-            "LEFT JOIN PostComment pc ON pc.post = p.id " +
-            "LEFT JOIN PostVote pvl on pvl.post = p.id and pvl.value = 1 " +
-            "WHERE p.isActive = 1 AND p.moderationStatus = 'ACCEPTED' AND p.time <= CURRENT_DATE() " +
-            "GROUP BY p.id " +
-            "ORDER BY COUNT(pvl) DESC"
-    )
-    Page<Post> findPostsOrderByLikes(Pageable pageable);
-
-    //////////// TEST 2
-
-    @Query("SELECT p, pc, pvl " +
-            "FROM Post p " +
-            "LEFT JOIN p.user u " +
-            "LEFT JOIN p.comments pc " +
-            "LEFT JOIN p.votes pvl " +
-            "WHERE p.isActive = 1 AND p.moderationStatus = 'ACCEPTED' AND p.time <= CURRENT_DATE() AND pvl.value = 1 " +
-            "GROUP BY p.id " +
-            "ORDER BY COUNT(pvl) DESC"
-    )
-    Page<Post> findPostsOrderByLikes2(Pageable pageable);
-
-    @Query("SELECT p " +
-            "FROM Post p " +
-            "JOIN p.user " +
-            "WHERE p.id = 1")
-    Page<Post> findPostTest(Pageable pageable);
+            "WHERE p.id = :id AND p.isActive = 1 ")
+    Optional<Post> findActivePostById(@Param("id") long id);
 
 
+    @Query(JPQL_SELECT_MODERATION_POSTS_DATA +
+            JPQL_WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS +
+            GROUP_BY_P_ID +
+            ORDER_BY_TIME)
+    List<Object[]> findModerationPostsData(Pageable pageRequest,
+                                           @Param("authUserId") long authUserId,
+                                           @Param("moderationStatus") ModerationStatus moderationStatus,
+                                           @Param("moderationStatusStr") String moderationStatusStr);
+
+    @Query(value = SELECT_COUNT_POSTS +
+                    WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS,
+                    nativeQuery = true)
+    Optional<Long> getTotalModerationPostsCount(@Param("authUserId") long authUserId,
+                                               @Param("moderationStatus") ModerationStatus moderationStatus,
+                                               @Param("moderationStatusStr") String moderationStatusStr);
+
+
+    @Query(JPQL_SELECT_STATISTICS_DATA +
+           JPQL_WHERE_GENERAL +
+           " AND u.id = :authUserId")
+    StatPostsDto getMyPostsStatistics(@Param("authUserId") long authUserId);
+
+
+    @Query(JPQL_SELECT_STATISTICS_DATA +
+           JPQL_WHERE_GENERAL)
+    StatPostsDto getAllPostsStatistics();
 
 }

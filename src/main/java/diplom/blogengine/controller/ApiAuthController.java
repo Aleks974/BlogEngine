@@ -1,8 +1,7 @@
 package diplom.blogengine.controller;
 
-import diplom.blogengine.api.request.UserDataRequest;
+import diplom.blogengine.api.request.UserRegisterDataRequest;
 import diplom.blogengine.api.request.UserLoginRequest;
-import diplom.blogengine.api.response.AuthResponse;
 import diplom.blogengine.api.response.mapper.ErrorResponseMapper;
 import diplom.blogengine.security.IAuthenticationService;
 import diplom.blogengine.service.ICaptchaService;
@@ -64,15 +63,23 @@ public class ApiAuthController {
     }
 
     @PostMapping("/api/auth/register")
-    public ResponseEntity<?> registerUser(@RequestBody @Valid UserDataRequest userDataRequest) {
+    public ResponseEntity<?> registerUser(@RequestBody @Valid UserRegisterDataRequest userRegisterDataRequest,
+                                          HttpServletRequest request) {
         log.debug("enter registerUser()");
 
+        if (authService.isAuthenticated()) {
+            // ToDo может лучше гененрировать exception?
+            return ResponseEntity.badRequest().build();
+        }
+
         if (!optionsSettingsService.multiUserModeIsEnabled()) {
+            // ToDo может лучше гененрировать exception?
             return ResponseEntity.notFound().build();
         }
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(userService.registerUser(userDataRequest));
+                .body(userService.registerUser(userRegisterDataRequest, request.getLocale()));
     }
 
     @PostMapping("/api/auth/login")
@@ -80,6 +87,7 @@ public class ApiAuthController {
         log.debug("enter loginUser()");
 
         authService.loginUser(httpRequest, userLoginRequest);
+        log.debug("success login user, id: " + authService.getAuthenticatedUserId());
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
@@ -96,4 +104,26 @@ public class ApiAuthController {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(authService.getLogoutData());
     }
+
+    //ToDo remember me function
+
+    //ToDo
+
+    @PostMapping("/api/auth/restore")
+    public ResponseEntity<?> restorePassword(HttpServletRequest request) {
+
+        /*postDataRequest.setLocale(request.getLocale());*/
+
+        return null;
+    }
+
+    @PostMapping("/api/auth/password")
+    public ResponseEntity<?> restorePasswordSaveNew(HttpServletRequest request) {
+
+        /*postDataRequest.setLocale(request.getLocale());*/
+
+        return null;
+    }
+
+
 }

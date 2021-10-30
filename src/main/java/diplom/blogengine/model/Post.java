@@ -15,9 +15,6 @@ import java.util.TimeZone;
 @Entity
 @Table(name = "posts")
 public class Post {
-    @Transient
-    private static final int ANNOUNCE_LENGTH = 150;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false, updatable = false)
@@ -64,7 +61,7 @@ public class Post {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @JsonIgnore
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     @JoinTable(name = "tag2post",
                joinColumns = { @JoinColumn(name = "post_id", foreignKey = @ForeignKey(name = "TAG2POST_POST_ID_FK")) },
                inverseJoinColumns = { @JoinColumn(name = "tag_id", foreignKey = @ForeignKey(name = "TAG2POST_TAG_ID_FK")) } )
@@ -75,16 +72,5 @@ public class Post {
     @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "post", fetch = FetchType.LAZY)
     private List<PostComment> comments;
-
-
-/*
-    public String getAnnounce(ContentHelper contentHelper) {
-        Objects.requireNonNull(contentHelper);
-        String announce = Objects.requireNonNull(text, "Text is null for post " + id);
-        String safeAnnounce = contentHelper.clearHtml(announce);
-        int len = safeAnnounce.length();
-        return safeAnnounce.substring(0, len > ANNOUNCE_LENGTH ? ANNOUNCE_LENGTH : len);
-    }*/
-
 
 }

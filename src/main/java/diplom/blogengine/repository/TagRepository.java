@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TagRepository extends JpaRepository<Tag, Long> {
@@ -40,4 +41,7 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
             "ORDER BY tag_count DESC " +
             "LIMIT 1", nativeQuery = true)
     long findMaxTagCount();
+
+
+    Optional<Tag> findByName(String name);
 }

@@ -74,10 +74,6 @@
             <appender-ref ref="console" />
             <appender-ref ref="rollingfile" />
         </logger>
-        <!--        <logger name="diplom.blogengine.controller.ApiGeneralController" level="trace" additivity="false">-->
-        <!--            <appender-ref ref="console" />-->
-        <!--            <appender-ref ref="rollingfile" />-->
-        <!--        </logger>-->
     </Loggers>
 
 </Configuration>

@@ -1,7 +1,6 @@
-package diplom.blogengine.service.util.cache;
+package diplom.blogengine.service.cache;
 
 import diplom.blogengine.model.dto.TagCountDto;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;

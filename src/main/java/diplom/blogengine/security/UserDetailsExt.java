@@ -6,22 +6,23 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 @Value
 @Builder
 public class UserDetailsExt implements UserDetails {
-    private long id;
-    private String username;
-    private String password;
-    private String realName;
-    private Collection<? extends GrantedAuthority> authorities;
-    private String photo;
-    private boolean isModerator;
-
+    private final long id;
+    private final String username;
+    private final String password;
+    private final String realName;
+    private final Collection<? extends GrantedAuthority> authorities;
+    private final String photo;
+    private final boolean isModerator;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null;
+        return Collections.unmodifiableCollection(authorities);
     }
 
     @Override

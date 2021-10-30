@@ -25,4 +25,13 @@ public class Tag {
     @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY, mappedBy = "tags")
     private List<Post> posts;
+
+    public Tag() {
+    }
+
+    public Tag(String name) {
+        super();
+        this.name = name;
+    }
+
 }
