@@ -4,16 +4,13 @@ import config.H2JpaConfig;
 import diplom.blogengine.Application;
 import diplom.blogengine.model.User;
 import diplom.blogengine.repository.UserRepository;
-import diplom.blogengine.service.util.PasswordHelper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import util.TestDataGenerator;
-
-import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +29,7 @@ public class UserRepositoryTest {
     private UserRepository userRepository;
 
     @Autowired
-    private PasswordHelper passwordHelper;
+    private PasswordEncoder passwordEncoder;
 
     private TestDataGenerator testDataGenerator = new TestDataGenerator();
 
@@ -67,8 +64,7 @@ public class UserRepositoryTest {
     public void givenUser_WhenSaveAndFindByName_thenOk() {
         // given
         User user = testDataGenerator.generateUser();
-        user = userRepository.save(user);
-        userRepository.flush();
+        user = userRepository.saveAndFlush(user);
 
         // when
         long actualUserId = userRepository.findUserIdByName(user.getName()).get();

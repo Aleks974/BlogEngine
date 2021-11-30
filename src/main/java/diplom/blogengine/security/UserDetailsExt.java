@@ -15,10 +15,10 @@ public class UserDetailsExt implements UserDetails {
     private final long id;
     private final String username;
     private final String password;
-    private final String realName;
     private final Collection<? extends GrantedAuthority> authorities;
-    private final String photo;
     private final boolean isModerator;
+    //private final String realName;
+    //private final String photo;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

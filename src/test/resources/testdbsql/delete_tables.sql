@@ -8,4 +8,6 @@ DROP TABLE posts;
 DROP TABLE users;
 DROP TABLE users_roles;
 DROP TABLE roles;
+DROP TABLE password_reset_tokens;
+
 

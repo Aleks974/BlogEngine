@@ -14,4 +14,12 @@ public class VoteDataRequest {
     @NotNull(message = "{votePostId.notnull}")
     @Positive(message = "{votePostId.positive}")
     private long postId;
+
+    public VoteDataRequest() {
+
+    }
+
+    public VoteDataRequest(long postId) {
+        this.postId = postId;
+    }
 }

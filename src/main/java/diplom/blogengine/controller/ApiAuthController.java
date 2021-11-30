@@ -1,7 +1,9 @@
 package diplom.blogengine.controller;
 
+import diplom.blogengine.api.request.UserNewPasswordRequest;
 import diplom.blogengine.api.request.UserRegisterDataRequest;
 import diplom.blogengine.api.request.UserLoginRequest;
+import diplom.blogengine.api.request.UserResetPasswordRequest;
 import diplom.blogengine.api.response.mapper.ErrorResponseMapper;
 import diplom.blogengine.security.IAuthenticationService;
 import diplom.blogengine.service.ICaptchaService;
@@ -9,6 +11,7 @@ import diplom.blogengine.service.IOptionsSettingsService;
 import diplom.blogengine.service.IUserService;
 import diplom.blogengine.service.util.DdosAtackDefender;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -68,12 +71,10 @@ public class ApiAuthController {
         log.debug("enter registerUser()");
 
         if (authService.isAuthenticated()) {
-            // ToDo может лучше гененрировать exception?
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
 
         if (!optionsSettingsService.multiUserModeIsEnabled()) {
-            // ToDo может лучше гененрировать exception?
             return ResponseEntity.notFound().build();
         }
 
@@ -105,24 +106,32 @@ public class ApiAuthController {
                 .body(authService.getLogoutData());
     }
 
-    //ToDo remember me function
-
-    //ToDo
-
     @PostMapping("/api/auth/restore")
-    public ResponseEntity<?> restorePassword(HttpServletRequest request) {
+    public ResponseEntity<?> resetPassword(@RequestBody @Valid UserResetPasswordRequest resetPasswordRequest,
+                                             HttpServletRequest request) {
+        log.debug("enter resetPassword()");
 
-        /*postDataRequest.setLocale(request.getLocale());*/
+        if (authService.isAuthenticated()) {
+            return ResponseEntity.notFound().build();
+        }
 
-        return null;
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(userService.resetPassword(resetPasswordRequest, request.getLocale()));
     }
 
     @PostMapping("/api/auth/password")
-    public ResponseEntity<?> restorePasswordSaveNew(HttpServletRequest request) {
+    public ResponseEntity<?> saveNewPassword(@RequestBody @Valid UserNewPasswordRequest newPasswordRequest,
+                                                  HttpServletRequest request) {
+        log.debug("enter saveNewPassword()");
 
-        /*postDataRequest.setLocale(request.getLocale());*/
+        if (authService.isAuthenticated()) {
+            return ResponseEntity.notFound().build();
+        }
 
-        return null;
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(userService.saveNewPassword(newPasswordRequest, request.getLocale()));
     }
 
 

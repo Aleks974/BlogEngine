@@ -12,14 +12,12 @@ import diplom.blogengine.api.response.mapper.PostsResponseMapper;
 import diplom.blogengine.api.response.mapper.ResultResponseMapper;
 import diplom.blogengine.exception.*;
 import diplom.blogengine.model.*;
-import diplom.blogengine.repository.PostCommentRepository;
-import diplom.blogengine.repository.PostRepository;
-import diplom.blogengine.repository.PostVoteRepository;
-import diplom.blogengine.repository.TagRepository;
+import diplom.blogengine.repository.*;
 import diplom.blogengine.security.UserDetailsExt;
 import diplom.blogengine.service.util.ContentHelper;
 import diplom.blogengine.service.util.TimestampHelper;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,19 +28,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class PostService implements IPostService {
     private final PostRepository postRepository;
+    private final CachedPostRepository cachedPostRepository;
     private final PostCommentRepository commentRepository;
-    private final TagRepository tagRepository;
+    private final ITagsService tagsService;
     private final PostVoteRepository postVoteRepository;
     private final PostsResponseMapper postsResponseMapper;
     private final ResultResponseMapper resultResponseMapper;
@@ -50,11 +50,11 @@ public class PostService implements IPostService {
     private final ContentHelper contentHelper;
     private final MessageSource messageSource;
 
-
     @PersistenceContext
     private EntityManager entityManager;
 
     private final int CURRENT_YEAR = LocalDate.now().getYear();
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String ANNOUNCE_MORE = "...";
     private static final int POST_ANNOUNCE_LENGTH = 150;
@@ -64,10 +64,12 @@ public class PostService implements IPostService {
     private static final int TEXT_MAX_LENGTH = 65000;
     private static final int COMMENT_TEXT_MIN_LENGTH = 3;
     private static final int COMMENT_TEXT_MAX_LENGTH = 65000;
+    private static final Pattern TAG_PATTERN = Pattern.compile("^[\\wа-яА-Я\\s\\.]{2,}$");
 
     public PostService(PostRepository postRepository,
+                       CachedPostRepository cachedPostRepository,
                        PostCommentRepository commentRepository,
-                       TagRepository tagRepository,
+                       ITagsService tagsService,
                        PostVoteRepository postVoteRepository,
                        TimestampHelper timestampHelper,
                        ContentHelper contentHelper,
@@ -75,8 +77,9 @@ public class PostService implements IPostService {
                        ResultResponseMapper resultResponseMapper,
                        MessageSource messageSource) {
         this.postRepository = postRepository;
+        this.cachedPostRepository = cachedPostRepository;
         this.commentRepository = commentRepository;
-        this.tagRepository = tagRepository;
+        this.tagsService = tagsService;
         this.postVoteRepository = postVoteRepository;
         this.timestampHelper = timestampHelper;
         this.contentHelper = contentHelper;
@@ -87,20 +90,20 @@ public class PostService implements IPostService {
 
     @Override
     public MultiplePostsResponse getPostsData(int offset, int limit, PostSortMode mode) {
-        log.debug("enter getPostsData()");
+        log.debug("enter getPostsData(), offset: {}, limit: {}, mode: {}", offset, limit, mode);
 
         List<Object[]> postsDataList;
         long totalPostsCount;
         Pageable pageRequest = getPageRequestWithSort(offset, limit, mode);
         if (mode == PostSortMode.BEST) {
-            postsDataList = postRepository.findPostsDataOrderByLikesCount(pageRequest);
-            totalPostsCount = postRepository.getTotalPostsCountExcludeDislikes();
+            postsDataList = cachedPostRepository.findPostsDataOrderByLikesCount(pageRequest);
+            totalPostsCount = cachedPostRepository.getTotalPostsCountExcludeDislikes();
         } else if (mode == PostSortMode.POPULAR) {
-            postsDataList = postRepository.findPostsDataOrderByCommentsCount(pageRequest);
-            totalPostsCount = postRepository.getTotalPostsCount();
+            postsDataList = cachedPostRepository.findPostsDataOrderByCommentsCount(pageRequest);
+            totalPostsCount = cachedPostRepository.getTotalPostsCount();
         } else  {
-            postsDataList = postRepository.findPostsData(pageRequest);
-            totalPostsCount = postRepository.getTotalPostsCount();
+            postsDataList = cachedPostRepository.findPostsData(pageRequest);
+            totalPostsCount = cachedPostRepository.getTotalPostsCount();
         }
 
         return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
@@ -127,7 +130,7 @@ public class PostService implements IPostService {
 
         if (myPostStatus.isActiveFlag()) {
             postsDataList = postRepository.findMyPostsData(pageRequest, authUserId, moderationStatus);
-            totalPostsCount = postRepository.getTotalMyPostsCount(authUserId, moderationStatus);
+            totalPostsCount = postRepository.getTotalMyPostsCount(authUserId, moderationStatus.toString());
         } else {
             postsDataList = postRepository.findMyPostsNotActiveData(pageRequest, authUserId);
             totalPostsCount = postRepository.getTotalMyPostsNotActiveCount(authUserId);
@@ -162,9 +165,10 @@ public class PostService implements IPostService {
         if (query == null || query.isEmpty()) {
             response = getPostsData(offset, limit, PostSortMode.RECENT);
         } else {
-            Pageable pageRequestWithSort = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
-            List<Object[]> postsDataList = postRepository.findPostsByQuery(query, pageRequestWithSort);
-            long totalPostsCount = postRepository.getTotalPostsCountByQuery(query);
+            query = query.toLowerCase();
+            Pageable pageRequest = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
+            List<Object[]> postsDataList = cachedPostRepository.findPostsByQuery(query, pageRequest);
+            long totalPostsCount = cachedPostRepository.getTotalPostsCountByQuery(query);
             response = postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
         }
         return response;
@@ -174,19 +178,19 @@ public class PostService implements IPostService {
     public MultiplePostsResponse getPostsDataByDate(int offset, int limit, String dateStr) {
         log.debug("enter getPostsDataByDate(): input offset: {}, limit: {}, dateStr: {}", offset, limit, dateStr);
 
-        final String INPUT_DATE_FORMAT = "yyyy-MM-dd";
+       /* final String INPUT_DATE_FORMAT = "yyyy-MM-dd";
         SimpleDateFormat dateFormatter = new SimpleDateFormat(INPUT_DATE_FORMAT);
-        dateFormatter.setLenient(false);
+        dateFormatter.setLenient(false);*/
         Date date;
         try {
-            date = dateFormatter.parse(dateStr);
-        } catch (ParseException ex) {
+            date = java.sql.Date.valueOf(LocalDate.parse(dateStr, formatter));
+        } catch (DateTimeParseException ex) {
             throw new RequestParamDateParseException("Input param date is invalid");
         }
 
         Pageable pageRequest = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
-        List<Object[]> postsDataList = postRepository.findPostsByDate(date, pageRequest);
-        long totalPostsCount = postRepository.getTotalPostsCountByDate(date);
+        List<Object[]> postsDataList = cachedPostRepository.findPostsByDate(date, pageRequest);
+        long totalPostsCount = cachedPostRepository.getTotalPostsCountByDate(date);
 
         return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
     }
@@ -196,8 +200,8 @@ public class PostService implements IPostService {
         log.debug("enter getPostsDataByTag()");
 
         Pageable pageRequest = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
-        List<Object[]> postsDataList = postRepository.findPostsByTag(tag, pageRequest);
-        long totalPostsCount = postRepository.getTotalPostsCountByTag(tag);
+        List<Object[]> postsDataList = cachedPostRepository.findPostsByTag(tag, pageRequest);
+        long totalPostsCount = cachedPostRepository.getTotalPostsCountByTag(tag);
 
         return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
     }
@@ -216,7 +220,7 @@ public class PostService implements IPostService {
     }
 
     @Override
-    public SinglePostResponse getPostDataById(long postId, UserDetailsExt authUser) { // ToDo передачу в метод UserDetailExt вместо использования authServiec внутри
+    public SinglePostResponse getPostDataById(long postId, UserDetailsExt authUser) {
         log.debug("enter getSinglePostById()");
 
         long authUserId = 0;
@@ -246,7 +250,7 @@ public class PostService implements IPostService {
     private Object[] getSinglePostData(long postId, long authUserId, boolean authUserIsModerator) {
         log.debug("enter getSinglePostData()");
 
-        List<Object[]> postDataList = postRepository.findPostById(postId, authUserId, authUserIsModerator);
+        List<Object[]> postDataList = cachedPostRepository.findPostById(postId, authUserId, authUserIsModerator);
         if (postDataList == null || postDataList.isEmpty()) {
             throw new PostNotFoundException(postId);
         }
@@ -264,6 +268,7 @@ public class PostService implements IPostService {
         postRepository.updatePostViewCount(post.getId());
     }
 
+    //ToDo ?
     private void initializeComments(Post post) {
         if (post.getComments() != null) {
             post.getComments().size();
@@ -288,22 +293,28 @@ public class PostService implements IPostService {
         long authUserId = authUser.getId();
         Pageable pageRequest = getPageRequest(offset, limit);
         List<Object[]> postsDataList = postRepository.findModerationPostsData(pageRequest, authUserId, status, status.toString());
-        long totalPostsCount = postRepository.getTotalModerationPostsCount(authUserId, status, status.toString()).orElse(0L);
+        log.debug("postsDataList.size: {}", postsDataList.size());
+
+        long totalPostsCount = postRepository.getTotalModerationPostsCount(authUserId, status.toString()).orElse(0L);
+        log.debug("totalPostsCount: {}", totalPostsCount);
 
         return postsResponseMapper.multiplePostsResponse(postsDataList, totalPostsCount);
     }
 
     @Override
-    public ResultResponse newPost(PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled) {
+    public ResultResponse newPost(PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled, Locale locale) {
         log.debug("enter newPost()");
 
         Objects.requireNonNull(postDataRequest, "postDataRequest is null");
         Objects.requireNonNull(authUser, "authUser is null");
+        Objects.requireNonNull(locale, "locale is null");
 
         clearTags(postDataRequest);
-        Map<String, String> errors = validatePostData(postDataRequest);
+        Map<String, String> errors = validatePostData(postDataRequest, locale);
         if (!errors.isEmpty()) {
-            return resultResponseMapper.failure(errors);
+            log.debug("newPost(): validation errors: {}", errors.toString());
+            throw new ValidationException(errors);
+            //return resultResponseMapper.failure(errors);
         }
 
         Post post = convertDtoToPost(postDataRequest);
@@ -318,7 +329,11 @@ public class PostService implements IPostService {
         }
         post.setModerationStatus(moderationStatus);
 
+        System.out.println(Hibernate.isInitialized(post));
+        System.out.println(Hibernate.isInitialized(user));
         postRepository.save(post);
+
+        cachedPostRepository.clearMultiplePostsAndCountsCache();
 
         return resultResponseMapper.success();
     }
@@ -326,11 +341,13 @@ public class PostService implements IPostService {
     @Modifying
     @Transactional
     @Override
-    public ResultResponse updatePost(long id, PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled) {
+    public ResultResponse updatePost(long id, PostDataRequest postDataRequest, UserDetailsExt authUser,
+                                     boolean moderationIsEnabled, Locale locale) {
         log.debug("enter updatePost(): id: {}", id);
 
         Objects.requireNonNull(postDataRequest, "postDataRequest is null");
         Objects.requireNonNull(authUser, "authUser is null");
+        Objects.requireNonNull(locale, "locale is null");
 
         // ToDo проверить статус attached или detached
         // user, Moderator инициализирован?
@@ -341,9 +358,11 @@ public class PostService implements IPostService {
         }
 
         clearTags(postDataRequest);
-        Map<String, String> errors = validatePostData(postDataRequest);
+        Map<String, String> errors = validatePostData(postDataRequest, locale);
         if (!errors.isEmpty()) {
-            return resultResponseMapper.failure(errors);
+            log.debug("newPost(): validation errors: {}", errors.toString());
+            throw new ValidationException(errors);
+            //return resultResponseMapper.failure(errors);
         }
 
         Post post = convertDtoToPost(postDataRequest);
@@ -358,22 +377,34 @@ public class PostService implements IPostService {
         }
 
         postRepository.save(post);
+
+        cachedPostRepository.clearSinglePostCache(id);
+        cachedPostRepository.clearMultiplePostsAndCountsCache();
+
         return resultResponseMapper.success();
     }
 
     private void clearTags(PostDataRequest postDataRequest) {
-        postDataRequest.setTitle(contentHelper.clearAllTags(postDataRequest.getTitle()));
-        postDataRequest.setText(contentHelper.clearProhibitedTags(postDataRequest.getText()));
+        String title = contentHelper.clearAllTags(postDataRequest.getTitle());
+        postDataRequest.setTitle(contentHelper.clearExtraSpaces(title));
+        String text = contentHelper.clearAllTagsExceptPermitted(postDataRequest.getText());
+        postDataRequest.setText(contentHelper.clearExtraSpaces(text));
     }
 
-    private Map<String, String> validatePostData(PostDataRequest postDataRequest) {
-        log.debug("enter validatePostData()");
+    private void clearTags(PostCommentDataRequest commentDataRequest) {
+        String text = contentHelper.clearAllTagsExceptPermitted(commentDataRequest.getText());
+        commentDataRequest.setText(contentHelper.clearExtraSpaces(text));
+    }
 
-        Locale locale = Objects.requireNonNull(postDataRequest.getLocale(), "locale is null");
+    private Map<String, String> validatePostData(PostDataRequest postDataRequest, Locale locale) {
+        log.debug("enter validatePostData()");
 
         Map<String, String> errors = new HashMap<>();
         errors.putAll(validateText(postDataRequest.getTitle(), "title", locale, TITLE_MIN_LENGTH, TITLE_MAX_LENGTH));
         errors.putAll(validateText(postDataRequest.getText(), "text", locale, TEXT_MIN_LENGTH, TEXT_MAX_LENGTH));
+        if (postDataRequest.getTags() != null) {
+            errors.putAll(validateTags(postDataRequest.getTags(), locale));
+        }
         return errors;
     }
 
@@ -385,6 +416,16 @@ public class PostService implements IPostService {
             errors.put(fieldName, messageSource.getMessage(fieldName.concat(".isshort"), null, locale));
         } else if (content.length() > max) {
             errors.put(fieldName, messageSource.getMessage(fieldName.concat(".islong"), null, locale));
+        }
+        return errors;
+    }
+
+    private Map<String, String> validateTags(Set<String> tags, Locale locale) {
+        Map<String, String> errors = new HashMap<>();
+        for (String tag : tags) {
+            if (!TAG_PATTERN.matcher(tag).matches()) {
+                errors.put("tags", messageSource.getMessage("tag.isincorrect", null, locale));
+            }
         }
         return errors;
     }
@@ -409,26 +450,21 @@ public class PostService implements IPostService {
         Set<Tag> tags = null;
         if (postDataRequest.getTags() != null) {
             tags = postDataRequest.getTags().stream()
-                    .map((String t) -> getOrSaveNewTag(t))
+                    .map((String t) -> tagsService.getOrSaveNewTag(t))
                     .collect(Collectors.toSet());
         }
         post.setTags(tags);
 
         post.setText(postDataRequest.getText());
 
-        String clearedText = contentHelper.clearTags(post.getText());
+        // announce
+        String clearedText = contentHelper.clearAllTags(post.getText());
         String announce = clearedText.length() > POST_ANNOUNCE_LENGTH ?
                 clearedText.substring(0, POST_ANNOUNCE_LENGTH).concat(ANNOUNCE_MORE) : clearedText;
+        announce = contentHelper.clearExtraSpaces(announce);
         post.setAnnounce(announce);
 
         return post;
-    }
-
-    private Tag getOrSaveNewTag(String t) {
-        String name = contentHelper.clearAllTags(t);
-        return tagRepository.findByName(name).orElseGet(() ->
-           tagRepository.save(new Tag(name))
-        );
     }
 
     @Override
@@ -447,7 +483,8 @@ public class PostService implements IPostService {
         Map<String, String> errors = validateText(commentDataRequest.getText(),
                                     "commentText", locale, COMMENT_TEXT_MIN_LENGTH, COMMENT_TEXT_MAX_LENGTH);
         if (!errors.isEmpty()) {
-            return resultResponseMapper.failure(errors);
+            throw new ValidationException(errors);
+            //return resultResponseMapper.failure(errors);
         }
 
         PostComment comment = convertDtoToComment(commentDataRequest);
@@ -484,12 +521,6 @@ public class PostService implements IPostService {
             }
         }
     }
-
-
-    private void clearTags(PostCommentDataRequest commentDataRequest) {
-        commentDataRequest.setText(contentHelper.clearProhibitedTags(commentDataRequest.getText()));
-    }
-
 
     private PostComment convertDtoToComment(PostCommentDataRequest commentDataRequest) {
         PostComment comment = new PostComment();

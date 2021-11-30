@@ -2,19 +2,15 @@ package unit;
 
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
-import diplom.blogengine.model.ModerationStatus;
 import diplom.blogengine.model.Post;
-import diplom.blogengine.model.User;
 import diplom.blogengine.repository.PostRepository;
-import diplom.blogengine.service.util.PasswordHelper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import util.TestDataGenerator;
-
-import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ActiveProfiles("test")
 public class PostRepositoryTest {
     @Autowired
-    private PasswordHelper passwordHelper;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private PostRepository postRepository;

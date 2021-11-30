@@ -7,8 +7,8 @@ import diplom.blogengine.api.response.mapper.InitOptionsResponseMapper;
 import diplom.blogengine.api.response.mapper.ResultResponseMapper;
 import diplom.blogengine.model.GlobalSetting;
 import diplom.blogengine.model.SettingsCode;
+import diplom.blogengine.repository.CachedSettingsRepository;
 import diplom.blogengine.repository.SettingsRepository;
-import diplom.blogengine.service.cache.GlobalSettingsCacheHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 @Service
 public class OptionsSettingsService implements IOptionsSettingsService {
     private final SettingsRepository settingsRepository;
+    private final CachedSettingsRepository cachedSettingsRepository;
     private final InitOptionsResponseMapper initOptionsResponseMapper;
     private final ResultResponseMapper resultResponseMapper;
-    private final GlobalSettingsCacheHandler globalSettingsCache;
 
     private static final String YES_VALUE = "YES";
     private static final String NO_VALUE = "NO";
@@ -35,12 +35,13 @@ public class OptionsSettingsService implements IOptionsSettingsService {
     private static final boolean STATISTICS_IS_PUBLIC_DEFAULT = false;
 
     public OptionsSettingsService(SettingsRepository settingsRepository,
+                                  CachedSettingsRepository cachedSettingsRepository,
                                   InitOptionsResponseMapper initOptionsResponseMapper,
                                   ResultResponseMapper resultResponseMapper) {
         this.settingsRepository = settingsRepository;
+        this.cachedSettingsRepository = cachedSettingsRepository;
         this.initOptionsResponseMapper = initOptionsResponseMapper;
         this.resultResponseMapper = resultResponseMapper;
-        this.globalSettingsCache = new GlobalSettingsCacheHandler();
     }
 
     @Override
@@ -59,11 +60,7 @@ public class OptionsSettingsService implements IOptionsSettingsService {
 
     private Map<String, Boolean> getCachedSettingsOrInit() {
         log.debug("enter getCachedSettingsOrInit()");
-
-        return globalSettingsCache.getCached().orElseGet(() -> {
-            List<GlobalSetting> list = settingsRepository.findAll();
-            return globalSettingsCache.cache(convertListToMap(list));
-        });
+        return convertListToMap(cachedSettingsRepository.findAll());
     }
 
     private Map<String, Boolean> convertListToMap(List<GlobalSetting> list) {
@@ -101,7 +98,7 @@ public class OptionsSettingsService implements IOptionsSettingsService {
     public ResultResponse updateSettings(GlobalSettingsRequest globalSettingsRequest) {
         Objects.requireNonNull(globalSettingsRequest);
 
-        List<GlobalSetting> settings = settingsRepository.findAll();
+        List<GlobalSetting> settings = cachedSettingsRepository.findAll();
         for (GlobalSetting setting : settings) {
             SettingsCode code = setting.getCode();
             String value = code.getValueFromRequest(globalSettingsRequest) ? YES_VALUE : NO_VALUE;
@@ -109,6 +106,9 @@ public class OptionsSettingsService implements IOptionsSettingsService {
         }
 
         settingsRepository.saveAll(settings);
+
+        cachedSettingsRepository.clearAllCache();
+
         return resultResponseMapper.success();
     }
 

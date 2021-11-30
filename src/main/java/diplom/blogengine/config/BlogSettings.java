@@ -9,6 +9,7 @@ import java.util.TimeZone;
 @Builder
 public class BlogSettings {
     private String title;
+    private String siteUrl;
     private String subtitle;
     private String phone;
     private String email;
@@ -16,7 +17,8 @@ public class BlogSettings {
     private String copyrightFrom;
     private TimeZone serverTimeZone;
     private int captchaDeleteTimeout;
-    private String prohibitedTags;
+    //private String prohibitedTags;
+    private String permittedTags;
     private String uploadDir;
     private String maxUploadSize;
 }

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -43,6 +44,11 @@ public class AuthenticationService implements IAuthenticationService {
 
     @Override
     public void loginUser(HttpServletRequest httpRequest, UserLoginRequest userLoginRequest) {
+        log.debug("enter loginUser()");
+
+        Objects.requireNonNull(httpRequest, "httpRequest is null");
+        Objects.requireNonNull(userLoginRequest, "userLoginRequest is null");
+
         String username = userLoginRequest.getEmail();
         String password = userLoginRequest.getPassword();
 

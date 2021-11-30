@@ -29,7 +29,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                                  "LEFT JOIN p.votes v " +
                                                  "LEFT JOIN p.comments c ";
     static final String JPQL_SELECT_MODERATION_POSTS_DATA = JPQL_SELECT_POSTS_DATA +
-                                                            "JOIN p.moderator m ";
+                                                            "LEFT JOIN p.moderator m ";
     static final String JPQL_SELECT_STATISTICS_DATA = "SELECT new diplom.blogengine.model.dto.StatPostsDto(COUNT(distinct p.id), SUM(p.viewCount), MIN(p.time)) " +
                                                         "FROM Post p " +
                                                         "JOIN p.user u ";
@@ -38,13 +38,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     static final String JPQL_JOIN_P_TAGS = " JOIN p.tags t ";
     static final String JPQL_JOIN_P_VOTES = " LEFT JOIN p.votes v ";
 
-    static final String JPQL_WHERE_GENERAL = "WHERE p.isActive = 1 AND p.moderationStatus = 'ACCEPTED' AND p.time <= NOW() ";
+    static final String JPQL_WHERE_GENERAL = "WHERE p.isActive = true AND p.moderationStatus = 'ACCEPTED' AND p.time <= NOW() ";
     static final String JPQL_WHERE_USERID_AND_NOTACTIVE = "WHERE u.id = :authUserId AND p.isActive = 0 ";
     static final String WHERE_USERID_AND_NOTACTIVE = "WHERE p.user_id = :authUserId AND p.is_active = 0 ";
     static final String JPQL_WHERE_USERID_AND_ACTIVE_AND_STATUS = "WHERE u.id = :authUserId AND p.isActive = 1 AND p.moderationStatus = :moderationStatus ";
     static final String WHERE_USERID_AND_ACTIVE_AND_STATUS = "WHERE p.user_id = :authUserId AND p.is_active = 1 AND p.moderation_status = :moderationStatus ";
-    static final String JPQL_WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS = "WHERE p.isActive = 1 AND ((:moderationStatusStr = 'NEW' OR m.id = :authUserId) AND p.moderationStatus = :moderationStatus) ";
-    static final String WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS = "WHERE p.is_active = 1 AND ((:moderationStatusStr = 'NEW' OR p.moderator_id = :authUserId) AND p.moderation_status = :moderationStatus) ";
+    static final String JPQL_WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS = "WHERE p.isActive = true AND (:moderationStatusStr = 'NEW' OR m.id = :authUserId) AND p.moderationStatus = :moderationStatus ";
+    static final String WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS = "WHERE p.is_active = 1 AND ((:moderationStatusStr = 'NEW' OR p.moderator_id = :authUserId) AND p.moderation_status = :moderationStatusStr) ";
     static final String WHERE_SEARCH_BY_PARAM_QUERY = " AND (p.title LIKE %:query% OR p.text LIKE %:query%) ";
     static final String WHERE_SEARCH_BY_PARAM_DATE = " AND DATE(p.time) = :date ";
     static final String WHERE_SEARCH_BY_PARAM_TAG = " AND t.name = :tag ";
@@ -92,7 +92,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(value = SELECT_COUNT_POSTS +
                    WHERE_USERID_AND_ACTIVE_AND_STATUS,
            nativeQuery = true)
-    long getTotalMyPostsCount(@Param("authUserId") long authUserId, @Param("moderationStatus") ModerationStatus moderationStatus);
+    long getTotalMyPostsCount(@Param("authUserId") long authUserId, @Param("moderationStatus") String moderationStatus);
 
 
     @Query(JPQL_SELECT_POSTS_DATA +
@@ -204,7 +204,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             GROUP_BY_P_ID +
             ORDER_BY_TIME)
     List<Object[]> findModerationPostsData(Pageable pageRequest,
-                                           @Param("authUserId") long authUserId,
+                                           long authUserId,
                                            @Param("moderationStatus") ModerationStatus moderationStatus,
                                            @Param("moderationStatusStr") String moderationStatusStr);
 
@@ -212,7 +212,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                     WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS,
                     nativeQuery = true)
     Optional<Long> getTotalModerationPostsCount(@Param("authUserId") long authUserId,
-                                               @Param("moderationStatus") ModerationStatus moderationStatus,
                                                @Param("moderationStatusStr") String moderationStatusStr);
 
 

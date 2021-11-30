@@ -3,6 +3,7 @@ package unit;
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
 import diplom.blogengine.api.response.SinglePostResponse;
+import diplom.blogengine.exception.PostNotFoundException;
 import diplom.blogengine.model.Post;
 import diplom.blogengine.repository.PostRepository;
 import diplom.blogengine.service.IPostService;
@@ -17,8 +18,7 @@ import util.TestDataGenerator;
 
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = {Application.class, H2JpaConfig.class},
         webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -56,7 +56,6 @@ public class PostServiceTest {
 
         Mockito.when(postRepository.findPostById(TEST_POST_ID, AUTH_USER_ID, IS_MODERATOR)).thenReturn(Collections.singletonList(mockPostData));
 
-        // ToDo
         SinglePostResponse response = postService.getPostDataById(TEST_POST_ID, null);
 
         assertNotNull(response);
@@ -64,6 +63,27 @@ public class PostServiceTest {
         assertEquals(testPost.getTitle(), response.getTitle());
         assertEquals(response.getLikeCount(), TEST_LIKE_COUNT);
         assertEquals(response.getDislikeCount(), TEST_DISLIKE_COUNT);
+    }
+
+
+    @Test
+    public void givenMockNullPostData_whenGetSinglePost_thenExceptionPostNotFoundRaised() {
+        final long TEST_POST_ID = 1;
+        final long AUTH_USER_ID = 0;
+        final boolean IS_MODERATOR = false;
+
+        Mockito.when(postRepository.findPostById(TEST_POST_ID, AUTH_USER_ID, IS_MODERATOR)).thenReturn(null);
+
+        Exception exception = assertThrows(PostNotFoundException.class, () -> postService.getPostDataById(TEST_POST_ID, null));
+
+        assertNotNull(exception);
+
+        String expectedMsg = "not found";
+        String actualMsg = exception.getMessage();
+
+        assertNotNull(actualMsg);
+        assertTrue(actualMsg.contains(expectedMsg));
+
     }
 
 }

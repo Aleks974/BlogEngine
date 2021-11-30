@@ -21,11 +21,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
-import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringJoiner;
@@ -86,13 +87,22 @@ public class BlogExceptionsHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
         log.warn("enter to handleMethodArgumentNotValid(), message: {}", ex.getMessage());
 
-        StringJoiner msg = new StringJoiner(", ");
+/*        StringJoiner msg = new StringJoiner(", ");
         for (FieldError err : ex.getFieldErrors()) {
             msg.add(err.getDefaultMessage());
         }
         log.debug(msg.toString());
         return ResponseEntity.badRequest()
                 .body(errorResponseMapper.errorResponse(msg.toString()));
+        StringJoiner msg = new StringJoiner(", ");*/
+
+        Map<String, String> errors = new HashMap<>();
+        for (FieldError err : ex.getFieldErrors()) {
+            errors.put(err.getField(), err.getDefaultMessage());
+        }
+        log.debug("handleMethodArgumentNotValid(), errors: {}", errors.toString());
+        return ResponseEntity.badRequest()
+                .body(resultResponseMapper.failure(errors));
     }
 
 
@@ -178,7 +188,19 @@ public class BlogExceptionsHandler extends ResponseEntityExceptionHandler {
 
         //String msg = String.format(messageSource.getMessage(ex.getMessage(), null, request.getLocale()), ex.getUserId());
 
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok().body(resultResponseMapper.failure());
+    }
+
+
+    // error send email
+    @ExceptionHandler({ SendEmailFailedException.class })
+    protected ResponseEntity<Object> handleSendEmailFailedException(SendEmailFailedException ex, WebRequest request) {
+        log.warn("enter to handleSendEmailFailedException(), message: {}", ex.getMessage());
+       /* Throwable cause = ex.getCause();
+        if (cause != null) {
+            log.warn(cause.getMessage());
+        }*/
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
     // post AccessDenied for edit
@@ -195,7 +217,7 @@ public class BlogExceptionsHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleBadCredentialsException(BadCredentialsException ex, WebRequest request) {
         log.warn("enter to handleBadCredentialsException(), message: {}",  ex.getMessage());
 
-        return ResponseEntity.ok().body(authResponsesMapper.failAuthResponse());
+        return ResponseEntity.ok().body(resultResponseMapper.failure());
     }
 
 
@@ -229,6 +251,13 @@ public class BlogExceptionsHandler extends ResponseEntityExceptionHandler {
                 .body(resultResponseMapper.failure(Map.of("image", msg)));
     }
 
+    @ExceptionHandler(ValidationException.class)
+    protected ResponseEntity<Object> handleValidationException(ValidationException ex, WebRequest request) {
+        log.warn("enter to handleValidationException(), message: {}", ex.getMessage());
+        return ResponseEntity.badRequest()
+                .body(resultResponseMapper.failure(ex.getErrors()));
+    }
+
 
 
     /*@Override
@@ -236,8 +265,13 @@ public class BlogExceptionsHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().build();
     }*/
 
+    @Override
+    protected ResponseEntity<Object> handleMissingServletRequestPart(MissingServletRequestPartException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        log.warn("enter to handleMissingServletRequestPart(), message: {}", ex.getMessage());
+        return ResponseEntity.badRequest().build();
+    }
 
-    // ToDo log 404 errors, and custom page,
+// ToDo log 404 errors, and custom page,
 
 
 }

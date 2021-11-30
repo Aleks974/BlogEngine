@@ -34,8 +34,6 @@ public class UserDetailsService implements org.springframework.security.core.use
                 .id(user.getId())
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .realName(user.getName())
-                .photo(user.getPhoto())
                 .isModerator(user.isModerator())
                 .authorities(authorities)
                 .build();

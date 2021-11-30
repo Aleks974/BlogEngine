@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    code VARCHAR(255),
     photo TEXT,
 PRIMARY KEY (id),
 UNIQUE (name),
@@ -28,6 +27,14 @@ CREATE TABLE IF NOT EXISTS users_roles (
     user_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
 PRIMARY KEY (user_id, role_id));
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    token VARCHAR(255) NOT NULL,
+    user_id BIGINT NOT NULL,
+    expiry_date DATETIME NOT NULL,
+PRIMARY KEY (id),
+UNIQUE (token));
 
 CREATE TABLE IF NOT EXISTS posts (
     id BIGINT NOT NULL AUTO_INCREMENT,

@@ -1,6 +1,7 @@
 package diplom.blogengine.api.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import diplom.blogengine.model.ModerationStatus;
 import diplom.blogengine.service.ModerationDecision;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,4 +19,12 @@ public class PostModerationRequest {
 
     @NotNull(message = "{moderation.decision.notnull}")
     private ModerationDecision decision;
+
+    public PostModerationRequest() {
+    }
+
+    public PostModerationRequest(long postId, ModerationDecision decision) {
+        this.postId = postId;
+        this.decision = decision;
+    }
 }

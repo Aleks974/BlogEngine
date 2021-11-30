@@ -1,10 +1,13 @@
 package diplom.blogengine.api.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import lombok.Builder;
 import lombok.Value;
 
 @Value
 @Builder
+@JsonDeserialize(builder = PostResponse.PostResponseBuilder.class)
 public class PostResponse {
     private long id;
     private long timestamp;
@@ -15,4 +18,9 @@ public class PostResponse {
     private long dislikeCount;
     private long commentCount;
     private long viewCount;
+
+    @JsonPOJOBuilder(withPrefix = "")
+    public static class PostResponseBuilder {
+
+    }
 }

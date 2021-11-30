@@ -22,7 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Sql(scripts = {"classpath:testdbsql/V1_0__create_db_schema_tables.sql",
         "classpath:testdbsql/V1_1__add_foreign_keys.sql",
-        "classpath:testdbsql/V1_2__insert_global_settings.sql"},
+        "classpath:testdbsql/V1_2__insert_global_settings.sql",
+        "classpath:testdbsql/V1_3__insert_test_data.sql"},
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Sql(scripts = {"classpath:testdbsql/delete_tables.sql"},
         executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)

@@ -3,10 +3,12 @@ package diplom.blogengine.service;
 import diplom.blogengine.api.response.TagResponse;
 import diplom.blogengine.api.response.MultipleTagsResponse;
 import diplom.blogengine.api.response.mapper.TagsResponseMapper;
+import diplom.blogengine.model.Tag;
 import diplom.blogengine.model.dto.TagCountDto;
-import diplom.blogengine.repository.PostRepository;
+import diplom.blogengine.repository.CachedPostRepository;
+import diplom.blogengine.repository.CachedTagRepository;
 import diplom.blogengine.repository.TagRepository;
-import diplom.blogengine.service.cache.TagsCacheHandler;
+import diplom.blogengine.service.util.ContentHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -18,18 +20,21 @@ import java.util.stream.Collectors;
 public class TagsService implements ITagsService {
 
     private final TagRepository tagRepository;
-    private final PostRepository postRepository;
+    private final CachedTagRepository cachedTagRepository;
+    private final CachedPostRepository cachedPostRepository;
     private final TagsResponseMapper tagsResponseMapper;
-    private final TagsCacheHandler tagsCache;
+    private final ContentHelper contentHelper;
 
     public TagsService(TagRepository tagRepository,
-                       PostRepository postRepository,
+                       CachedTagRepository cachedTagRepository,
+                       CachedPostRepository cachedPostRepository,
                        TagsResponseMapper tagsResponseMapper,
-                       TagsCacheHandler tagsCache) {
+                       ContentHelper contentHelper) {
         this.tagRepository = tagRepository;
-        this.postRepository = postRepository;
+        this.cachedTagRepository = cachedTagRepository;
+        this.cachedPostRepository = cachedPostRepository;
         this.tagsResponseMapper = tagsResponseMapper;
-        this.tagsCache = tagsCache;
+        this.contentHelper = contentHelper;
     }
 
     @Override
@@ -40,20 +45,18 @@ public class TagsService implements ITagsService {
         List<TagCountDto> tagsDto;
         long maxTagCount = 0;
         if (query == null || query.isEmpty()) {
-            tagsDto = tagsCache.getCachedAllQuery().orElseGet(tagRepository::findAllTagsCounts);
+            tagsDto = cachedTagRepository.findAllTagsCounts();
             if (!tagsDto.isEmpty()) {
                 maxTagCount = tagsDto.get(0).getCount();
             }
-            tagsCache.cacheAllQuery(tagsDto);
         } else {
-            tagsDto = tagsCache.getCachedQuery(query).orElseGet(() -> tagRepository.findTagsCountsByQuery(query));
+            tagsDto = cachedTagRepository.findTagsCountsByQuery(query);
             if (!tagsDto.isEmpty()) {
                 maxTagCount = tagRepository.findMaxTagCount();
             }
-            tagsCache.cacheQuery(query, tagsDto);
         }
 
-        long postsTotalCount = postRepository.getTotalPostsCount();
+        long postsTotalCount = cachedPostRepository.getTotalPostsCount();
 
         if (tagsDto == null || tagsDto.isEmpty()) {
             response = tagsResponseMapper.emptyResponse();
@@ -95,6 +98,15 @@ public class TagsService implements ITagsService {
             result = Math.round(result * 100) / 100.0;
         }
         return result;
+    }
+
+    public Tag getOrSaveNewTag(String name) {
+        Tag tag = cachedTagRepository.findByName(name);
+        if (tag == null) {
+            tag = tagRepository.save(new Tag(name));
+            cachedTagRepository.clearAllCache();
+        }
+        return tag;
     }
 
 }

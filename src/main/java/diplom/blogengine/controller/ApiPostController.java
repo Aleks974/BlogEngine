@@ -4,6 +4,7 @@ import diplom.blogengine.api.request.PostCommentDataRequest;
 import diplom.blogengine.api.request.PostDataRequest;
 import diplom.blogengine.api.request.PostModerationRequest;
 import diplom.blogengine.api.request.VoteDataRequest;
+import diplom.blogengine.api.response.ResponseHelper;
 import diplom.blogengine.model.ModerationStatus;
 import diplom.blogengine.security.IAuthenticationService;
 import diplom.blogengine.service.*;
@@ -49,6 +50,8 @@ public class ApiPostController {
     public ResponseEntity<?> getPosts(@RequestParam(required = false, defaultValue = DEFAULT_OFFSET) @PositiveOrZero int offset,
                                       @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) @PositiveOrZero @Max(MAX_LIMIT) int limit,
                                       @RequestParam(required = false, defaultValue = DEFAULT_MODE) PostSortMode mode) {
+        log.debug("enter getPosts()");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getPostsData(offset, limit, mode));
@@ -59,6 +62,8 @@ public class ApiPostController {
     public ResponseEntity<?> getPostsByQuery(@RequestParam(required = false, defaultValue = DEFAULT_OFFSET) @PositiveOrZero int offset,
                                       @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) @PositiveOrZero @Max(MAX_LIMIT) int limit,
                                       @RequestParam(required = false) @Size(max = MAX_QUERY_LENGTH) String query) {
+        log.debug("enter getPostsByQuery()");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getPostsDataByQuery(offset, limit, query));
@@ -69,6 +74,8 @@ public class ApiPostController {
     public ResponseEntity<?> getPostsByDate(@RequestParam(required = false, defaultValue = DEFAULT_OFFSET) @PositiveOrZero int offset,
                                             @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) @PositiveOrZero @Max(MAX_LIMIT) int limit,
                                             @RequestParam(required = true) @Size(min = DATE_LENGTH, max = DATE_LENGTH) String date) {
+        log.debug("enter getPostsByDate()");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getPostsDataByDate(offset, limit, date));
@@ -79,6 +86,8 @@ public class ApiPostController {
     public ResponseEntity<?> getPostsByTag(@RequestParam(required = false, defaultValue = DEFAULT_OFFSET) @PositiveOrZero int offset,
                                             @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) @PositiveOrZero @Max(MAX_LIMIT) int limit,
                                             @RequestParam(required = true) @Size(max = MAX_QUERY_LENGTH) String tag) {
+        log.debug("enter getPostsByTag()");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getPostsDataByTag(offset, limit, tag));
@@ -87,6 +96,8 @@ public class ApiPostController {
 
     @GetMapping("/api/calendar")
     public ResponseEntity<?> getCalendarByYear(@RequestParam(required = false) @Min(2000) @Max(2050) Integer year) {
+        log.debug("enter getCalendarByYear()");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getCalendarDataByYear(year));
@@ -95,6 +106,8 @@ public class ApiPostController {
 
     @GetMapping("/api/post/{id}")
     public ResponseEntity<?> getPost(@PathVariable(required = true) long id) {
+        log.debug("enter getPost()");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getPostDataById(id, authService.getAuthenticatedUser()));
@@ -104,8 +117,10 @@ public class ApiPostController {
     public ResponseEntity<?> getMyPosts(@RequestParam(required = false, defaultValue = DEFAULT_OFFSET) @PositiveOrZero int offset,
                                         @RequestParam(required = false, defaultValue = DEFAULT_LIMIT) @PositiveOrZero @Max(MAX_LIMIT) int limit,
                                         @RequestParam(required = false, defaultValue = DEFAULT_MYPOSTS_STATUS) MyPostStatus status) {
+        log.debug("enter getMyPosts()");
+
         if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
 
         return ResponseEntity.ok()
@@ -118,13 +133,13 @@ public class ApiPostController {
         log.debug("enter newPost()");
 
         if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
-        postDataRequest.setLocale(request.getLocale());
+
         boolean moderationIsEnabled = optionsSettingsService.postPremoderationIsEnabled();
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(postService.newPost(postDataRequest, authService.getAuthenticatedUser(), moderationIsEnabled));
+                .body(postService.newPost(postDataRequest, authService.getAuthenticatedUser(), moderationIsEnabled, request.getLocale()));
     }
 
     @PutMapping("/api/post/{id}")
@@ -133,13 +148,13 @@ public class ApiPostController {
         log.debug("enter updatePost()");
 
         if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
-        postDataRequest.setLocale(request.getLocale());
+
         boolean moderationIsEnabled = optionsSettingsService.postPremoderationIsEnabled();
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(postService.updatePost(id, postDataRequest, authService.getAuthenticatedUser(), moderationIsEnabled));
+                .body(postService.updatePost(id, postDataRequest, authService.getAuthenticatedUser(), moderationIsEnabled, request.getLocale()));
     }
 
 
@@ -149,7 +164,7 @@ public class ApiPostController {
         log.debug("enter newComment()");
 
         if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
@@ -163,7 +178,7 @@ public class ApiPostController {
         log.debug("enter newLike()");
 
         if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
@@ -176,39 +191,26 @@ public class ApiPostController {
                                                 @RequestParam(required = false, defaultValue = DEFAULT_MODERATION_STATUS) ModerationStatus status) {
         log.debug("enter getModerationPosts()");
 
-        if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
-        }
-        if (!authService.getAuthenticatedUser().isModerator()) {
-            return unauthorizedResponse();
+        if (!authService.isAuthenticated() || !authService.getAuthenticatedUser().isModerator()) {
+            return ResponseHelper.unauthorizedResponse();
         }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.getModerationPostsData(offset, limit, status, authService.getAuthenticatedUser()));
     }
-
-
+    
     @PostMapping("/api/moderation")
     public ResponseEntity<?> moderatePost(@RequestBody @Valid PostModerationRequest postModerationRequest) {
         log.debug("enter moderatePost()");
 
-        if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
-        }
-        if (!authService.getAuthenticatedUser().isModerator()) {
-            return unauthorizedResponse();
+        if (!authService.isAuthenticated() || !authService.getAuthenticatedUser().isModerator()) {
+            return ResponseHelper.unauthorizedResponse();
         }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(postService.moderatePost(postModerationRequest, authService.getAuthenticatedUser()));
-    }
-
-    private ResponseEntity<?> unauthorizedResponse() {
-        log.debug("enter unauthorizedResponse()");
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
 }

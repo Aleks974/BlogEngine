@@ -30,8 +30,13 @@ public class FileStorageService implements IFileStorageService {
     private final Set<String> allowedExt = Set.of("JPG", "JPEG", "PNG");
 
     public FileStorageService(BlogSettings blogSettings, ImageHelper imageHelper) {
-        uploadDirRoot = Paths.get(blogSettings.getUploadDir());
         this.imageHelper = imageHelper;
+        uploadDirRoot = Path.of(blogSettings.getUploadDir());
+
+       /*
+       System.out.println(FileSystems.getDefault().getPath("test").toAbsolutePath());
+        System.out.println(Path.of("test").toAbsolutePath());
+        System.out.println(System.getProperty("user.dir"));*/
     }
 
     @PostConstruct

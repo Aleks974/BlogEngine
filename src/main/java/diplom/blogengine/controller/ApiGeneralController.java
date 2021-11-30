@@ -2,6 +2,7 @@ package diplom.blogengine.controller;
 
 import diplom.blogengine.api.request.GlobalSettingsRequest;
 import diplom.blogengine.api.request.UserProfileDataRequest;
+import diplom.blogengine.api.response.ResponseHelper;
 import diplom.blogengine.security.IAuthenticationService;
 import diplom.blogengine.service.IFileStorageService;
 import diplom.blogengine.service.IGeneralService;
@@ -17,6 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Slf4j
 @RestController
@@ -59,7 +62,7 @@ public class ApiGeneralController {
         log.debug("enter updateSettings()");
 
         if (!authService.isAuthenticated() || !authService.getAuthenticatedUser().isModerator()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
 
         return ResponseEntity.ok()
@@ -72,9 +75,8 @@ public class ApiGeneralController {
         log.debug("enter getMyStatisics()");
 
         if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
-
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(generalService.getMyStatistics(authService.getAuthenticatedUserId()));
@@ -87,7 +89,7 @@ public class ApiGeneralController {
         if (!optionsSettingsService.statisticsIsPublic() &&
                     (!authService.isAuthenticated() || !authService.getAuthenticatedUser().isModerator()) )
         {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
 
         return ResponseEntity.ok()
@@ -96,11 +98,11 @@ public class ApiGeneralController {
     }
 
     @PostMapping(value = "/api/profile/my", consumes = "application/json")
-    public ResponseEntity<?> saveProfile(@RequestBody UserProfileDataRequest userData, HttpServletRequest request) {
+    public ResponseEntity<?> saveProfile(@RequestBody @Valid UserProfileDataRequest userData, HttpServletRequest request) {
         log.debug("enter saveProfile()");
 
         if (!authService.isAuthenticated()) {
-            return unauthorizedResponse();
+            return ResponseHelper.unauthorizedResponse();
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
@@ -108,28 +110,22 @@ public class ApiGeneralController {
     }
 
     @PostMapping(value = "/api/profile/my", consumes = "multipart/form-data")
-    public ResponseEntity<?> saveProfileWithPhoto(@ModelAttribute @NotNull UserProfileDataRequest userData,
+    public ResponseEntity<?> saveProfileWithPhoto(@ModelAttribute @Valid UserProfileDataRequest userData,
                                          @RequestParam("photo") @NotNull MultipartFile photoFile,
                                          HttpServletRequest request) {
-
         log.debug("enter saveProfileWithPhoto()");
 
         if (!authService.isAuthenticated()) {
-                return unauthorizedResponse();
+                return ResponseHelper.unauthorizedResponse();
         }
-
+        if (userData == null) {
+            userData = new UserProfileDataRequest();
+        }
         userData.setPhotoFile(photoFile);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(userService.saveProfile(userData, authService.getAuthenticatedUser(), request.getLocale()));
-    }
-
-
-    private ResponseEntity<?> unauthorizedResponse() {
-        log.debug("enter unauthorizedResponse()");
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
 }

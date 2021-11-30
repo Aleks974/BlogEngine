@@ -1,5 +1,7 @@
 package diplom.blogengine.api.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -10,7 +12,8 @@ public class CaptchaResponse {
     @NonNull
     private final String image;
 
-    public CaptchaResponse(String secret, String image) {
+    @JsonCreator
+    public CaptchaResponse(@JsonProperty("secret") String secret, @JsonProperty("image") String image) {
         this.secret = secret;
         this.image = image;
     }

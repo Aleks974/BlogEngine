@@ -1,159 +1,528 @@
 package integration;
 
-import config.H2JpaConfig;
-import diplom.blogengine.Application;
+import diplom.blogengine.api.request.UserNewPasswordRequest;
 import diplom.blogengine.api.request.UserRegisterDataRequest;
+import diplom.blogengine.api.request.UserResetPasswordRequest;
 import diplom.blogengine.api.response.AuthResponse;
 import diplom.blogengine.api.response.CaptchaResponse;
 import diplom.blogengine.api.response.ResultResponse;
+import diplom.blogengine.api.response.UserInfoAuthResponse;
 import diplom.blogengine.model.CaptchaCode;
+import diplom.blogengine.model.PasswordResetToken;
+import diplom.blogengine.model.User;
 import diplom.blogengine.repository.CaptchaCodeRepository;
+import diplom.blogengine.repository.PasswordTokenRepository;
 import diplom.blogengine.repository.UserRepository;
-import diplom.blogengine.service.util.PasswordHelper;
+import diplom.blogengine.service.util.MailHelper;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
-import util.RequestHelper;
-import util.TestDataGenerator;
+import org.springframework.http.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
-
-import javax.persistence.EntityManager;
-import javax.swing.text.StyledEditorKit;
-
+import java.net.URI;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
-@SpringBootTest(classes = {Application.class, H2JpaConfig.class},
-                webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Sql(scripts = {"classpath:testdbsql/V1_0__create_db_schema_tables.sql",
-        "classpath:testdbsql/V1_1__add_foreign_keys.sql",
-        "classpath:testdbsql/V1_2__insert_global_settings.sql",
-        "classpath:testdbsql/V1_3__insert_test_data.sql"},
-        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-@Sql(scripts = {"classpath:testdbsql/delete_tables.sql"},
-        executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-@ActiveProfiles("test")
-public class ApiAuthControllerTest {
-    @LocalServerPort
-    private int port;
-    private String host;
-
-    @Autowired
-    private TestRestTemplate testRestTemplate;
-
-    @Autowired
-    EntityManager entityManager;
-
+public class ApiAuthControllerTest extends ApiControllerRestTest {
     @Autowired
     private CaptchaCodeRepository captchaCodeRepository;
 
     @Autowired
     private UserRepository userRepository;
 
-    @BeforeEach
-    public void setUp() {
-        host = "http://localhost:" + port;
-    }
-
     @Autowired
-    private PasswordHelper passwordHelper;
+    private PasswordTokenRepository passwordTokenRepository;
 
-    private TestDataGenerator testDataGenerator = new TestDataGenerator();
+    @MockBean
+    private MailHelper mailHelper;
+    // /api/auth/check
 
     @Test
-    public void givenResourceUrl_whenSendGetAuthCheck_thenStatusOkAndResultFieldEquals() throws Exception {
-        String resourceUrl = host + "/api/auth/check";
-        AuthResponse authResponse = RequestHelper.sendGetRequest(resourceUrl,
-                                                        AuthResponse.class,
-                                                        RequestHelper::assertResponseOkAndContentTypeJson,
-                                                        testRestTemplate);
+    public void givenNotAuth_whenSendGetAuthCheck_thendResultFalse() throws Exception {
+        String notAuth = "";
+        ResponseEntity<AuthResponse> responseEntity = sendGetAuthCheck(notAuth);
+        assertStatusOkAndContentTypeJson(responseEntity);
 
-        assertNotNull(authResponse);
+        AuthResponse authResponse = responseEntity.getBody();
         boolean expectedResultField = false;
-        boolean actualResultField = authResponse.isResult();
-        assertEquals(expectedResultField, actualResultField);
+        assertEquals(expectedResultField, authResponse.isResult());
+        assertNull(authResponse.getUser());
     }
 
+    @Test
+    public void giveUserLogin_whenSendGetAuthCheck_thenResultTrue() throws Exception {
+        String cookie = getCookieAfterSuccessLogin(user3Email, user3Pass);
+
+        ResponseEntity<AuthResponse> responseEntity = sendGetAuthCheck(cookie);
+        assertStatusOkAndContentTypeJson(responseEntity);
+
+        AuthResponse authResponse = responseEntity.getBody();
+        boolean expectedResultField = true;
+        assertEquals(expectedResultField, authResponse.isResult());
+
+        UserInfoAuthResponse user = authResponse.getUser();
+        assertNotNull(user);
+        System.out.println(user);
+
+        String expectedName = "Ivan Egorov";
+        assertEquals(expectedName, user.getName());
+        assertNull(user.getPhoto());
+        String expectedEmail = "c@cc.ru";
+        assertEquals(expectedEmail, user.getEmail());
+        boolean expecteMod = false;
+        assertEquals(expecteMod, user.isModeration());
+        int expectedModCount = 0;
+        assertEquals(expectedModCount, user.getModerationCount());
+        boolean expectedSet = false;
+        assertEquals(expectedSet, user.isSettings());
+    }
+
+    @Test
+    public void giveModeratorLogin_whenSendGetAuthCheck_thenResultTrue() throws Exception {
+        String cookie = getCookieAfterSuccessLogin(moderatorEmail, moderatorPass);
+
+        ResponseEntity<AuthResponse> responseEntity = sendGetAuthCheck(cookie);
+        assertStatusOkAndContentTypeJson(responseEntity);
+
+        AuthResponse authResponse = responseEntity.getBody();
+        boolean expectedResultField = true;
+        assertEquals(expectedResultField, authResponse.isResult());
+
+        UserInfoAuthResponse user = authResponse.getUser();
+        assertNotNull(user);
+        System.out.println(user);
+
+        String expectedName = "Aleksandr Ivanov";
+        assertEquals(expectedName, user.getName());
+        assertNull(user.getPhoto());
+        String expectedEmail = "a@aa.ru";
+        assertEquals(expectedEmail, user.getEmail());
+        boolean expecteMod = true;
+        assertEquals(expecteMod, user.isModeration());
+        int expectedModCount = 2;
+        assertEquals(expectedModCount, user.getModerationCount());
+        boolean expectedSet = true;
+        assertEquals(expectedSet, user.isSettings());
+    }
+
+    // /api/auth/captcha
 
     @Test
     public void givenResourceUrl_whenSendGetCaptcha_thenCaptchaSavedAndReturnedCorrect() throws Exception {
-        String resourceUrl = host + "/api/auth/captcha";
-        CaptchaResponse captchaResponse = RequestHelper.sendGetRequest(resourceUrl,
-                                                    CaptchaResponse.class,
-                                                    RequestHelper::assertResponseOkAndContentTypeJson,
-                                                    testRestTemplate);
+        String resourceUrl = "/api/auth/captcha";
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(host)
+                .path(resourceUrl)
+                .build()
+                .toUri();
+        TestRestTemplate testRestTemplate = new TestRestTemplate();
+        ResponseEntity<CaptchaResponse> responseEntity = testRestTemplate.getForEntity(uri, CaptchaResponse.class);
+        assertStatusOkAndContentTypeJson(responseEntity);
 
-        assertNotNull(captchaResponse);
+        CaptchaResponse response = responseEntity.getBody();
+        assertNotNull(response);
         String IMAGE_CONTENT_TYPE = "data:image/png;base64";
-        assertTrue(captchaResponse.getImage().startsWith(IMAGE_CONTENT_TYPE));
-        assertNotNull(captchaCodeRepository.findCodeBySecret(captchaResponse.getSecret()));
+        assertTrue(response.getImage().startsWith(IMAGE_CONTENT_TYPE));
+        assertNotNull(captchaCodeRepository.findCodeBySecret(response.getSecret()));
+    }
 
+    // /api/auth/register
+
+    @Test
+    public void givenUserRegisterRequestAndWrongCaptchaCode_whenSendPostRegister_then400BadRequestUserNotSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+        String wrongCode = "wrong";
+        UserRegisterDataRequest request = testDataGenerator.generateUserRegisterDataRequest(wrongCode, captcha.getSecretCode());
+
+        ResponseEntity<ResultResponse> responseEntity = sendPostUserRegister(request);
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+
+        ResultResponse response = responseEntity.getBody();
+        assertFalse(response.getResult());
+
+        assertNotNull(response.getErrors());
+        String errorKey = "captcha";
+        assertTrue(response.getErrors().containsKey(errorKey));
+
+        long expectedCount = 3;
+        assertEquals(expectedCount, userRepository.count());
+
+        String expectedEmail = request.getEmail();
+        assertFalse(userRepository.findByEmail(expectedEmail).isPresent());
+    }
+
+
+    @Test
+    public void givenWrongUserRegisterRequest_whenSendPostRegister_then400BadRequestUserNotSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+
+        UserRegisterDataRequest request = testDataGenerator.generateUserRegisterDataRequest();
+        ResponseEntity<ResultResponse> responseEntity = sendPostUserRegister(request);
+        assertBadRequestAndResultFalse(responseEntity, errors -> {
+            Set<String> expectedErrorKeys = Set.of("email", "password", "name", "captcha", "captchaSecret");
+            assertEquals(expectedErrorKeys, errors.keySet());
+        });
+
+
+        request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
+        String wrongEmail = "test.ru";
+        request.setEmail(wrongEmail);
+        responseEntity = sendPostUserRegister(request);
+        assertBadRequestAndResultFalse(responseEntity, errors -> {
+            Set<String> expectedErrorKeys = Set.of("email");
+            assertEquals(expectedErrorKeys, errors.keySet());
+        });
+
+
+        request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
+        String existedEmail = "a@aa.ru";
+        request.setEmail(existedEmail);
+        responseEntity = sendPostUserRegister(request);
+        assertBadRequestAndResultFalse(responseEntity, errors -> {
+            Set<String> expectedErrorKeys = Set.of("email");
+            assertEquals(expectedErrorKeys, errors.keySet());
+        });
+
+
+        request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
+        String shortPass = "12345";
+        request.setPassword(shortPass);
+        responseEntity = sendPostUserRegister(request);
+        assertBadRequestAndResultFalse(responseEntity, errors -> {
+            Set<String> expectedErrorKeys = Set.of("password");
+            assertEquals(expectedErrorKeys, errors.keySet());
+        });
+
+
+        request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
+        String wrongName = "123";
+        request.setName(wrongName);
+        responseEntity = sendPostUserRegister(request);
+        assertBadRequestAndResultFalse(responseEntity, errors -> {
+            Set<String> expectedErrorKeys = Set.of("name");
+            assertEquals(expectedErrorKeys, errors.keySet());
+        });
+
+        long expectedUsersCount = 3;
+        assertEquals(expectedUsersCount, userRepository.count());
     }
 
     @Test
-    public void givenResourceUrlAndCaptcha_whenSendPostUser_thenUserRegisteredAndResponseCorrect() throws Exception {
-        String resourceUrl = host + "/api/auth/register";
-        long usersCountBeforeReg = userRepository.count();
-        CaptchaCode captchaCode = generateAndSaveCaptchaCode();
+    public void givenUserRegisterRequestAndCaptcha_whenSendPostRegister_thenUserSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+        UserRegisterDataRequest request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
 
-        String resourceJson = testDataGenerator.generateUserDataRequestJson(captchaCode.getCode(), captchaCode.getSecretCode());
-        ResultResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
-                                                                    resourceJson,
-                                                                    UserRegisterDataRequest.class,
-                                                                    ResultResponse.class,
-                                                                    RequestHelper::assertResponseOkAndContentTypeJson,
-                                                                    testRestTemplate);
-        assertNotNull(registerUserResponse);
-        assertThat(registerUserResponse.getResult().booleanValue(), equalTo(true));
+        ResponseEntity<ResultResponse> responseEntity = sendPostUserRegister(request);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
 
-        long usersCountAfterReg = userRepository.count();
-        assertThat(usersCountAfterReg, equalTo(usersCountBeforeReg + 1));
+        ResultResponse response = responseEntity.getBody();
+        assertTrue(response.getResult());
+
+        long expectedCount = 4;
+        assertEquals(expectedCount, userRepository.count());
+
+        String expectedEmail = request.getEmail();
+        assertTrue(userRepository.findByEmail(expectedEmail).isPresent());
+    }
+
+    // /api/auth/restore
+
+    @Test
+    public void givenResetPasswordRequestWithNotExistedEmail_whenSendPostRestore_then200OkResultFalse() throws Exception {
+        String wrongEmail = "notexisted@email.ru";
+        UserResetPasswordRequest request = new UserResetPasswordRequest(wrongEmail);
+
+        ResponseEntity<ResultResponse> responseEntity = sendPostAuthRestore(request);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+        ResultResponse response = responseEntity.getBody();
+        assertFalse(response.getResult());
+    }
+
+    @Test
+    public void givenResetPasswordRequestWithNullEmail_whenSendPostRestore_then400BadRequest() throws Exception {
+        String wrongEmail = null;
+        UserResetPasswordRequest request = new UserResetPasswordRequest(wrongEmail);
+
+        ResponseEntity<ResultResponse> responseEntity = sendPostAuthRestore(request);
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+    }
+
+    @Test
+    public void givenUserLoginAndResetPasswordRequest_whenSendPostRestore_then404NotFound() throws Exception {
+        String cookie = getCookieAfterSuccessLogin(user3Email, user3Pass);
+        UserResetPasswordRequest request = new UserResetPasswordRequest(user3Email);
+
+        ResponseEntity<ResultResponse> responseEntity = sendPostAuthRestore(request, cookie);
+        assertEquals(HttpStatus.NOT_FOUND, responseEntity.getStatusCode());
     }
 
 
     @Test
-    public void givenResourceUrlAndCaptcha_whenSendPostUserWithWrongCode_thenUserNotRegisteredAndResponseCorrect() throws Exception {
-        String resourceUrl = host + "/api/auth/register";
-        long usersCountBeforeReg = userRepository.count();
-        CaptchaCode captchaCode = generateAndSaveCaptchaCode();
+    public void givenResetPasswordRequest_whenSendPostRestore_then200OkPasswordResetTokenCreated() throws Exception {
+        assertTrue(passwordTokenRepository.findAll().isEmpty());
+        sendRestorePasswordRequestAndAssert(user3Email);
+        String token = getPasswordResetToken(user3Id);
+        assertNotNull(token);
+    }
 
-        String resourceJson = testDataGenerator.generateUserDataRequestJson("wrong_code", captchaCode.getSecretCode());
-        ResultResponse registerUserResponse = RequestHelper.sendPostRequestJson(resourceUrl,
-                                                                    resourceJson,
-                                                                    UserRegisterDataRequest.class,
-                                                                    ResultResponse.class,
-                                                                    RequestHelper::assertResponseOkAndContentTypeJson,
-                                                                    testRestTemplate);
-        assertNotNull(registerUserResponse);
-        assertThat(registerUserResponse.getResult().booleanValue(), equalTo(false));
+    // /api/auth/password
 
-        long usersCountAfterReg = userRepository.count();
-        assertThat(usersCountAfterReg, equalTo(usersCountBeforeReg));
+    @Test
+    public void givenCaptchaAndResetPasswordTokenAndNewPasswordRequest_whenSendPostNewPassword_then200OkNewPasswordSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
 
-        Map<String, String> errors = registerUserResponse.getErrors();
-        assertNotNull(errors);
-        String captchaError = errors.get("captcha");
-        assertThat(captchaError, equalTo("Код с картинки введён неверно"));
+        assertTrue(passwordTokenRepository.findAll().isEmpty());
+        sendRestorePasswordRequestAndAssert(user3Email);
+        String token = getPasswordResetToken(user3Id);
+        assertNotNull(token);
+
+        String newPass = "newpassword";
+        String codeCaptcha = captcha.getCode();
+        String captchaSecret = captcha.getSecretCode();
+        UserNewPasswordRequest request = UserNewPasswordRequest
+                                        .builder()
+                                        .code(token)
+                                        .password(newPass)
+                                        .captcha(codeCaptcha)
+                                        .captchaSecret(captchaSecret)
+                                        .build();
+        ResponseEntity<ResultResponse> responseEntity = sendPostNewPassword(request);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertTrue(response.getResult());
+
+        loginUserAndAssert(user3Email, newPass);
+    }
+
+
+    @Test
+    public void givenWrongCaptchaAndResetPasswordTokenAndNewPasswordRequest_whenSendPostNewPassword_then400BadRequestAndPassNotSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+
+        assertTrue(passwordTokenRepository.findAll().isEmpty());
+        sendRestorePasswordRequestAndAssert(user3Email);
+        String token = getPasswordResetToken(user3Id);
+        assertNotNull(token);
+
+        String newPass = "newpassword";
+        String codeCaptcha = "wrongCaptcha";
+        String captchaSecret = captcha.getSecretCode();
+        UserNewPasswordRequest request = UserNewPasswordRequest
+                .builder()
+                .code(token)
+                .password(newPass)
+                .captcha(codeCaptcha)
+                .captchaSecret(captchaSecret)
+                .build();
+        ResponseEntity<ResultResponse> responseEntity = sendPostNewPassword(request);
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertFalse(response.getResult());
+        assertNotNull(response.getErrors());
+
+        loginUserFailAndAssert(user3Email, newPass);
+    }
+
+    @Test
+    public void givenWrongPassAndResetPasswordTokenAndNewPasswordRequest_whenSendPostNewPassword_then200OkNewPasswordSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+
+        assertTrue(passwordTokenRepository.findAll().isEmpty());
+        sendRestorePasswordRequestAndAssert(user3Email);
+        String token = getPasswordResetToken(user3Id);
+        assertNotNull(token);
+
+        String newPass = "short";
+        String codeCaptcha = captcha.getCode();
+        String captchaSecret = captcha.getSecretCode();
+        UserNewPasswordRequest request = UserNewPasswordRequest
+                .builder()
+                .code(token)
+                .password(newPass)
+                .captcha(codeCaptcha)
+                .captchaSecret(captchaSecret)
+                .build();
+        ResponseEntity<ResultResponse> responseEntity = sendPostNewPassword(request);
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertFalse(response.getResult());
+        assertNotNull(response.getErrors());
+
+        loginUserFailAndAssert(user3Email, newPass);
+    }
+
+    @Test
+    public void givenWrongTokenAndNewPasswordRequest_whenSendPostNewPassword_then400BadRequestAndPassNotSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+
+        String token = "wrongToken";
+
+        String newPass = "newpassword";
+        String codeCaptcha = captcha.getCode();
+        String captchaSecret = captcha.getSecretCode();
+        UserNewPasswordRequest request = UserNewPasswordRequest
+                .builder()
+                .code(token)
+                .password(newPass)
+                .captcha(codeCaptcha)
+                .captchaSecret(captchaSecret)
+                .build();
+        ResponseEntity<ResultResponse> responseEntity = sendPostNewPassword(request);
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertFalse(response.getResult());
+        assertNotNull(response.getErrors());
+
+        loginUserFailAndAssert(user3Email, newPass);
+    }
+
+    @Test
+    public void givenExpiredTokenAndNewPasswordRequest_whenSendPostNewPassword_then400BadRequestAndPassNotSaved() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+
+        String token = createExpiredToken(user3Id);
+
+        String newPass = "newpassword";
+        String codeCaptcha = captcha.getCode();
+        String captchaSecret = captcha.getSecretCode();
+        UserNewPasswordRequest request = UserNewPasswordRequest
+                .builder()
+                .code(token)
+                .password(newPass)
+                .captcha(codeCaptcha)
+                .captchaSecret(captchaSecret)
+                .build();
+        ResponseEntity<ResultResponse> responseEntity = sendPostNewPassword(request);
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertFalse(response.getResult());
+        assertNotNull(response.getErrors());
+
+        loginUserFailAndAssert(user3Email, newPass);
+    }
+
+    // NOT TESTS ///////////////////////////////////////////////////////////////////////////
+
+    private void assertStatusOkAndContentTypeJson(ResponseEntity<?> responseEntity) {
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        assertTrue(responseEntity.getHeaders().getContentType().isCompatibleWith(MediaType.APPLICATION_JSON));
+    }
+
+    private ResponseEntity<AuthResponse> sendGetAuthCheck(String cookie) {
+        String resourceUrl = "/api/auth/check";
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(host)
+                .path(resourceUrl)
+                .build()
+                .toUri();
+        TestRestTemplate testRestTemplate = new TestRestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Cookie", cookie);
+        HttpEntity entity = new HttpEntity(headers);
+        return testRestTemplate.exchange(uri, HttpMethod.GET, entity, AuthResponse.class);
+    }
+
+    private ResponseEntity<ResultResponse> sendPostUserRegister(UserRegisterDataRequest request) {
+        String resourceUrl = "/api/auth/register";
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(host)
+                .path(resourceUrl)
+                .build()
+                .toUri();
+        TestRestTemplate testRestTemplate = new TestRestTemplate();
+        HttpEntity<UserRegisterDataRequest> entity = new HttpEntity<>(request);
+        return testRestTemplate.exchange(uri, HttpMethod.POST, entity, ResultResponse.class);
+    }
+
+    private void assertBadRequestAndResultFalse(ResponseEntity<ResultResponse> responseEntity, Consumer<Map<String, String>> errorsConsumer) {
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertFalse(response.getResult());
+        assertNotNull(response.getErrors());
+
+        if (errorsConsumer != null) {
+            errorsConsumer.accept(response.getErrors());
+        }
+    }
+
+    private ResponseEntity<ResultResponse> sendPostAuthRestore(UserResetPasswordRequest request) {
+        return sendPostAuthRestore(new HttpEntity<>(request));
+    }
+
+    private ResponseEntity<ResultResponse> sendPostAuthRestore(UserResetPasswordRequest request, String cookie) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Cookie", cookie);
+        return sendPostAuthRestore(new HttpEntity<>(request, headers));
+    }
+
+    private ResponseEntity<ResultResponse> sendPostAuthRestore(HttpEntity<?> entity) {
+        String resourceUrl = "/api/auth/restore";
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(host)
+                .path(resourceUrl)
+                .build()
+                .toUri();
+        TestRestTemplate testRestTemplate = new TestRestTemplate();
+        return testRestTemplate.exchange(uri, HttpMethod.POST, entity, ResultResponse.class);
+    }
+
+    private ResponseEntity<ResultResponse> sendPostNewPassword(UserNewPasswordRequest request) {
+        String resourceUrl = "/api/auth/password";
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(host)
+                .path(resourceUrl)
+                .build()
+                .toUri();
+        TestRestTemplate testRestTemplate = new TestRestTemplate();
+        HttpEntity<UserNewPasswordRequest> entity = new HttpEntity<>(request);
+        return testRestTemplate.exchange(uri, HttpMethod.POST, entity, ResultResponse.class);
+    }
+
+    private void sendRestorePasswordRequestAndAssert(String email) {
+        UserResetPasswordRequest request = new UserResetPasswordRequest(email);
+        ResponseEntity<ResultResponse> responseEntity = sendPostAuthRestore(request);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertTrue(response.getResult());
+    }
+
+    private String getPasswordResetToken(long userId) {
+        PasswordResetToken token = passwordTokenRepository.findByUserId(userId);
+        assertNotNull(token);
+        return token.getToken();
+    }
+
+    private void sendNewPasswordRequestAndAssert(UserNewPasswordRequest request) {
+        ResponseEntity<ResultResponse> responseEntity = sendPostNewPassword(request);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        ResultResponse response = responseEntity.getBody();
+        assertTrue(response.getResult());
     }
 
     private CaptchaCode generateAndSaveCaptchaCode() {
-        CaptchaCode captchaCode = captchaCodeRepository.save(testDataGenerator.generateCaptchaCode());
-        captchaCodeRepository.flush();
+        CaptchaCode captchaCode = captchaCodeRepository.saveAndFlush(testDataGenerator.generateCaptchaCode());
         return captchaCode;
+    }
+
+    private String createExpiredToken(long userId) {
+        User user = userRepository.findById(userId).get();
+
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken passwordResetToken = new PasswordResetToken(token, user);
+        passwordResetToken.setExpiryDate(LocalDateTime.now().minus(1, ChronoUnit.HOURS));
+        passwordTokenRepository.save(passwordResetToken);
+        return token;
     }
 }

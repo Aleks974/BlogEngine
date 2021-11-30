@@ -1,56 +1,67 @@
 package diplom.blogengine.service;
 
+import diplom.blogengine.api.request.UserNewPasswordRequest;
 import diplom.blogengine.api.request.UserProfileDataRequest;
 import diplom.blogengine.api.request.UserRegisterDataRequest;
+import diplom.blogengine.api.request.UserResetPasswordRequest;
 import diplom.blogengine.api.response.ResultResponse;
 import diplom.blogengine.api.response.mapper.ResultResponseMapper;
 import diplom.blogengine.exception.UserNotFoundException;
+import diplom.blogengine.exception.ValidationException;
+import diplom.blogengine.model.PasswordResetToken;
 import diplom.blogengine.model.User;
+import diplom.blogengine.repository.CachedPostRepository;
 import diplom.blogengine.repository.CaptchaCodeRepository;
+import diplom.blogengine.repository.PasswordTokenRepository;
 import diplom.blogengine.repository.UserRepository;
 import diplom.blogengine.security.UserDetailsExt;
+import diplom.blogengine.service.util.MailHelper;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.jni.Local;
 import org.springframework.context.MessageSource;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Predicate;
+import java.util.*;
 import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 public class UserService implements IUserService {
     private final static int MIN_PASSWORD_LENGTH = 6;
-    private final static Pattern NAME_PATTERN = Pattern.compile("(?ui)^[\\w]+[\\w -.]+[\\w.]+$");
-
+    private final static Pattern NAME_PATTERN = Pattern.compile("(?i)^[a-zA-Zа-яА-Я]+[a-zA-Zа-яА-Я.]{2,}$");
 
     private final UserRepository userRepository;
+    private final CachedPostRepository cachedPostRepository;
+    private final PasswordTokenRepository passwordTokenRepository;
     private final CaptchaCodeRepository captchaCodeRepository;
     private final IFileStorageService fileStorageService;
     private final ResultResponseMapper responsesMapper;
     private final PasswordEncoder passwordEncoder;
     private final MessageSource messageSource;
-
+    private final MailHelper mailHelper;
 
     public UserService(UserRepository userRepository,
+                       CachedPostRepository cachedPostRepository,
+                       PasswordTokenRepository passwordTokenRepository,
                        CaptchaCodeRepository captchaCodeRepository,
                        IFileStorageService fileStorageService,
                        ResultResponseMapper responsesMapper,
                        PasswordEncoder passwordEncoder,
-                       MessageSource messageSource) {
+                       MessageSource messageSource,
+                       MailHelper mailHelper) {
         this.userRepository = userRepository;
+        this.cachedPostRepository = cachedPostRepository;
+        this.passwordTokenRepository = passwordTokenRepository;
         this.captchaCodeRepository = captchaCodeRepository;
         this.fileStorageService = fileStorageService;
         this.responsesMapper = responsesMapper;
         this.passwordEncoder = passwordEncoder;
         this.messageSource = messageSource;
+        this.mailHelper = mailHelper;
     }
 
     @Override
@@ -62,7 +73,7 @@ public class UserService implements IUserService {
 
         Map<String, String> errors = validateUserRegisterData(userData, locale);
         if (!errors.isEmpty()) {
-            return responsesMapper.failure(errors);
+            throw new ValidationException(errors);
         }
         saveUser(convertDtoToUser(userData));
         return responsesMapper.success();
@@ -107,7 +118,7 @@ public class UserService implements IUserService {
         }
 
         if (!errors.isEmpty()) {
-            return responsesMapper.failure(errors);
+            throw new ValidationException(errors);
         }
 
         final int REMOVE_PHOTO_FLAG = 1;
@@ -130,6 +141,55 @@ public class UserService implements IUserService {
         }
         userRepository.save(updateUser);
 
+        cachedPostRepository.clearAllCache();
+
+        return responsesMapper.success();
+    }
+
+    @Override
+    public ResultResponse resetPassword(UserResetPasswordRequest resetPasswordRequest, Locale locale) {
+        log.debug("enter resetPasswordSendToken()");
+
+        Objects.requireNonNull(resetPasswordRequest, "resetPasswordRequest is null");
+        Objects.requireNonNull(locale, "locale is null");
+
+        String email = resetPasswordRequest.getEmail();
+        // ToDo возвращать id юзера и использовать getReference
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException(email));
+
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken passwordResetToken = new PasswordResetToken(token, user);
+        passwordTokenRepository.save(passwordResetToken);
+
+        mailHelper.sendResetPasswordEmail(email, token, locale);
+        return responsesMapper.success();
+    }
+
+    @Override
+    public ResultResponse saveNewPassword(UserNewPasswordRequest newPasswordRequest, Locale locale) {
+        log.debug("enter saveNewPassword()");
+
+        Objects.requireNonNull(newPasswordRequest, "newPasswordRequest is null");
+        Objects.requireNonNull(locale, "locale is null");
+
+        String token = newPasswordRequest.getCode();
+        String newPassword = newPasswordRequest.getPassword();
+        String captcha = newPasswordRequest.getCaptcha();
+        String captchaSecret = newPasswordRequest.getCaptchaSecret();
+
+        Map<String, String> errors = new HashMap<>();
+        if (!validateCaptcha(captcha, captchaSecret, errors, locale) ) {
+            throw new ValidationException(errors);
+        }
+
+        PasswordResetToken passwordResetToken = passwordTokenRepository.findByToken(token);
+        if (!validatePasswordResetToken(passwordResetToken, errors, locale) || !validatePassword(newPassword, errors, locale)) {
+            throw new ValidationException(errors);
+        }
+
+        User user = passwordResetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.saveAndFlush(user);
         return responsesMapper.success();
     }
 
@@ -141,7 +201,8 @@ public class UserService implements IUserService {
         user.setEmail(userRegisterDataRequest.getEmail());
         user.setPassword(passwordEncoder.encode(userRegisterDataRequest.getPassword()));
         user.setRegTime(LocalDateTime.now());
-        user.setModerator(false);
+        boolean isModerator = false;
+        user.setModerator(isModerator);
         return user;
     }
 
@@ -155,12 +216,10 @@ public class UserService implements IUserService {
         log.debug("enter validateUserRegisterData()");
 
         Map<String, String> errors = new HashMap<>();
-
+        validateCaptcha(userData.getCaptcha(), userData.getCaptchaSecret(), errors, locale);
         validateEmail(userData.getEmail(), errors, locale);
         validateName(userData.getName(), errors, locale);
         validatePassword(userData.getPassword(), errors, locale);
-        validateCaptcha(userData.getCaptcha(), userData.getCaptchaSecret(), errors, locale);
-
         return errors;
     }
 
@@ -185,11 +244,6 @@ public class UserService implements IUserService {
             errors.put("name", messageSource.getMessage("name.alreadyexists", null, locale));
             valid = false;
         }
-
-        if (existName(name)) {
-            errors.put("name", messageSource.getMessage("name.alreadyexists", null, locale));
-            valid = false;
-        }
         return valid;
     }
 
@@ -202,12 +256,26 @@ public class UserService implements IUserService {
         return valid;
     }
 
-    private void validateCaptcha(String inputCode, String secretCode, Map<String, String> errors, Locale locale) {
+    private boolean validateCaptcha(String inputCode, String secretCode, Map<String, String> errors, Locale locale) {
+        boolean valid = true;
         if (inputCode != null && secretCode != null && !captchaIsValid(inputCode, secretCode)) {
             errors.put("captcha", messageSource.getMessage("captcha.isincorrect", null, locale));
+            valid = false;
         }
+        return valid;
     }
 
+    private boolean validatePasswordResetToken(PasswordResetToken passwordResetToken, Map<String, String> errors, Locale locale) {
+        boolean valid = true;
+        if (passwordResetToken == null || passwordResetToken.getUser() == null) {
+            errors.put("code", messageSource.getMessage("token.resetPassword.isIncorrect", null, locale));
+            valid = false;
+        } else if (passwordResetToken.isExpired()) {
+            errors.put("code", messageSource.getMessage("token.resetPassword.isExpired", null, locale));
+            valid = false;
+        }
+        return valid;
+    }
 
     private boolean existEmail(String email) {
         log.debug("enter existEmail()");
@@ -233,4 +301,9 @@ public class UserService implements IUserService {
         String code = captchaCodeRepository.findCodeBySecret(secretCode);
         return code != null && code.equals(inputCode);
     }
+
+
+
 }
+
+

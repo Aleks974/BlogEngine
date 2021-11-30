@@ -1,6 +1,5 @@
 package diplom.blogengine.api.request;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,7 +7,6 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
-import java.util.Locale;
 import java.util.Set;
 
 @Getter
@@ -22,8 +20,8 @@ public class PostDataRequest {
     private long timestamp;
 
     @NotNull(message = "{active.notnull}")
-    @Min(value = ACTIVE_MIN, message = "active.minmax")
-    @Max(value = ACTIVE_MAX, message = "active.minmax")
+    @Min(value = ACTIVE_MIN, message = "{active.minmax}")
+    @Max(value = ACTIVE_MAX, message = "{active.minmax}")
     private int active;
 
     @NotNull(message = "{title.notnull}")
@@ -34,6 +32,4 @@ public class PostDataRequest {
 
     private Set<String> tags;
 
-    @JsonIgnore
-    private Locale locale;
 }

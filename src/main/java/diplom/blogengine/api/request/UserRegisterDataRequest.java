@@ -40,7 +40,4 @@ public class UserRegisterDataRequest {
      @NotBlank(message = "{captchasecret.notblank}")
      @Size(max = MAX_STRING_FIELD_LENGTH, message = "{stringfield.exceedlength}")
      private String captchaSecret;
-
-     @JsonIgnore
-     private Locale locale;
 }

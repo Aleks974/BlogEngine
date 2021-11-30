@@ -2,6 +2,7 @@ package integration;
 
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
+import diplom.blogengine.service.MyPostStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -123,7 +124,7 @@ public class ApiPostControllerTest {
 
     }
 
-    //@Test
+    @Test
     public void whenGetBestPosts_thenOk() throws Exception {
         final int BEST_POSTS_COUNT = 2;
         mvc.perform(get("/api/post?offset=0&limit=20&mode=best"))
@@ -166,6 +167,15 @@ public class ApiPostControllerTest {
                 .andExpect(jsonPath("$.posts[0].title", Matchers.is(POST4_TITLE)))
                 .andExpect(jsonPath("$.posts[1].title", Matchers.is(POST3_TITLE)));
 
+    }
+
+    @Test
+    public void whenGetPostsByWrongDate_then400BadRequest() throws Exception {
+        final String WRONG_DATE_QUERY = "202-08-11";
+        mvc.perform(get("/api/post/byDate?offset=0&limit=20&date=" + WRONG_DATE_QUERY))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
     @Test
@@ -233,11 +243,10 @@ public class ApiPostControllerTest {
     }
 
     @Test
-    public void givenWrongYear_whenGetCalendarData_ThenOk() throws Exception {
+    public void givenWrongYear_whenGetCalendarData_Then400BadRequest() throws Exception {
         final String YEAR = "1000f";
         mvc.perform(get("/api/calendar?year=" + YEAR))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
     }
-
 }

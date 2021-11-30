@@ -1,1 +1,3 @@
 spring.flyway.enabled: false
+blog:
+  uploadDir: upload_tmp # загружаем в папку откуда запущено приложение (для тестов)

@@ -6,11 +6,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -19,14 +16,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class RequestHelper {
     public static  <T> T sendGetRequest(String resourceUrl,
                                         Class<T> responseClazz,
-                                        AssertFunctional assertFunction,
+                                        AssertEntity assertFunction,
                                         TestRestTemplate testRestTemplate) throws IOException {
         RestTemplateBuilder builder = new RestTemplateBuilder()
                                             .additionalMessageConverters(testRestTemplate.getRestTemplate().getMessageConverters());
         TestRestTemplate testRestTemplateLocal = new TestRestTemplate(builder);
 
         ResponseEntity<T> response = testRestTemplateLocal.getForEntity(resourceUrl, responseClazz);
-        assertFunction.assertFunc(response);
+        assertFunction.asserts(response);
 
         return response.getBody();
     }
@@ -35,7 +32,7 @@ public class RequestHelper {
                                                String resourceJson,
                                                Class<T> requestClazz,
                                                Class<V> responseClazz,
-                                               AssertFunctional assertFunction,
+                                               AssertEntity assertFunction,
                                                TestRestTemplate testRestTemplate) throws IOException {
         RestTemplateBuilder builder = new RestTemplateBuilder()
                 .additionalMessageConverters(testRestTemplate.getRestTemplate().getMessageConverters());
@@ -44,7 +41,7 @@ public class RequestHelper {
         T resource = retrieveResourceFromJson(resourceJson, requestClazz);
         HttpEntity<T> request = new HttpEntity<>(resource);
         ResponseEntity<V> response = testRestTemplateLocal.postForEntity(resourceUrl, request, responseClazz);
-        assertFunction.assertFunc(response);
+        assertFunction.asserts(response);
 
         return response.getBody();
     }

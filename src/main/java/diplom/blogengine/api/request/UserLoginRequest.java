@@ -17,10 +17,19 @@ public class UserLoginRequest {
      @JsonProperty("e_mail")
      @NotBlank(message = "{email.notblank}")
      @Size(max = MAX_STRING_FIELD_LENGTH, message = "{stringfield.exceedlength}")
-     @EmailConstraint(message = "{email.incorrect}")
      private String email;
 
      @NotBlank(message = "{password.notblank}")
      @Size(max = MAX_STRING_FIELD_LENGTH, message = "{stringfield.exceedlength}")
      private String password;
+
+     public UserLoginRequest() {
+
+     }
+
+     public UserLoginRequest(String email, String password) {
+          this.email = email;
+          this.password = password;
+     }
+
 }

@@ -31,17 +31,16 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
             "ORDER BY tag_count DESC")
     List<TagCountDto> findTagsCountsByQuery(@Param("query") String query);
 
-
     @Query(value = "SELECT COUNT(p.id) AS tag_count " +
             "FROM tags t " +
             "LEFT JOIN tag2post tp ON t.id = tp.tag_id " +
             "LEFT JOIN posts p ON tp.post_id = p.id " +
-            "WHERE p.id = NULL OR (p.is_active = 1 AND p.moderation_status = 'ACCEPTED' AND p.time <= NOW()) " +
+            "WHERE p.is_active = 1 AND p.moderation_status = 'ACCEPTED' AND p.time <= NOW() " +
             "GROUP BY t.id " +
             "ORDER BY tag_count DESC " +
             "LIMIT 1", nativeQuery = true)
     long findMaxTagCount();
 
 
-    Optional<Tag> findByName(String name);
+    Tag findByName(String name);
 }

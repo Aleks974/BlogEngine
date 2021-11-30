@@ -30,9 +30,9 @@ public interface IPostService {
 
     MultiplePostsResponse getModerationPostsData(int offset, int limit, ModerationStatus status, UserDetailsExt authUser);
 
-    ResultResponse newPost(PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled);
+    ResultResponse newPost(PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled, Locale locale);
 
-    ResultResponse updatePost(long id, PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled);
+    ResultResponse updatePost(long id, PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled, Locale locale);
 
     ResultResponse newComment(PostCommentDataRequest commentDataRequest, UserDetailsExt authUser, Locale locale);
 

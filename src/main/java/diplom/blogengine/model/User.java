@@ -50,10 +50,10 @@ public class User {
     )
     private Set<Role> roles;
 
-    @ToString.Exclude
+/*    @ToString.Exclude
     @JsonIgnore
     @Column(length = 255, nullable = true)
-    private String code;
+    private String code;*/
 
     @Column(nullable = true, columnDefinition = "TEXT")
     private String photo;

@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "blog")
 public class BlogProperties {
     private String title;
+    private String siteUrl;
     private String subtitle;
     private String phone;
     private String email;
@@ -14,7 +15,8 @@ public class BlogProperties {
     private String copyrightFrom;
     private String serverTimeZone;
     private int captchaDeleteTimeout;
-    private String prohibitedTags;
+    //private String prohibitedTags;
+    private String permittedTags;
     private String uploadDir;
     private String maxUploadSize;
 }

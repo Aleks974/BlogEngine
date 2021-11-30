@@ -15,6 +15,7 @@ public class Tag {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false, updatable = false)
+    @EqualsAndHashCode.Exclude
     private long id;
 
     @Column(length = 255, unique = true, nullable = false)
@@ -30,7 +31,6 @@ public class Tag {
     }
 
     public Tag(String name) {
-        super();
         this.name = name;
     }
 

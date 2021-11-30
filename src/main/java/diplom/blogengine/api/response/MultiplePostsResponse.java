@@ -1,5 +1,7 @@
 package diplom.blogengine.api.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 import java.util.Collections;
@@ -10,8 +12,9 @@ public class MultiplePostsResponse {
     private final long count;
     private final List<PostResponse> posts;
 
-    public MultiplePostsResponse(long count, List<PostResponse> posts) {
+    @JsonCreator
+    public MultiplePostsResponse(@JsonProperty("count") long count, @JsonProperty("posts") List<PostResponse> posts) {
         this.count = count;
-        this.posts = Collections.unmodifiableList(posts);
+        this.posts = posts;
     }
 }

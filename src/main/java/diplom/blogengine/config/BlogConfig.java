@@ -1,10 +1,11 @@
 package diplom.blogengine.config;
 
+import diplom.blogengine.repository.*;
 import diplom.blogengine.service.util.*;
-import diplom.blogengine.service.cache.GlobalSettingsCacheHandler;
-import diplom.blogengine.service.cache.TagsCacheHandler;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.mail.MailSender;
 
 import java.util.Objects;
 import java.util.TimeZone;
@@ -25,6 +26,7 @@ public class BlogConfig {
         }
         return BlogSettings.builder()
                 .title(Objects.requireNonNull(blogProp.getTitle()))
+                .siteUrl(Objects.requireNonNull(blogProp.getSiteUrl()))
                 .subtitle(Objects.requireNonNull(blogProp.getSubtitle()))
                 .phone(Objects.requireNonNull(blogProp.getPhone()))
                 .email(Objects.requireNonNull(blogProp.getEmail()))
@@ -32,7 +34,8 @@ public class BlogConfig {
                 .copyrightFrom(Objects.requireNonNull(blogProp.getCopyrightFrom()))
                 .serverTimeZone(timeZone)
                 .captchaDeleteTimeout(timeout)
-                .prohibitedTags(Objects.requireNonNull(blogProp.getProhibitedTags()))
+                //.prohibitedTags(Objects.requireNonNull(blogProp.getProhibitedTags()))
+                .permittedTags(Objects.requireNonNull(blogProp.getPermittedTags()))
                 .uploadDir(Objects.requireNonNull(blogProp.getUploadDir()))
                 .maxUploadSize(Objects.requireNonNull(blogProp.getMaxUploadSize()))
                 .build();
@@ -51,13 +54,13 @@ public class BlogConfig {
 
     @Bean
     public ContentHelper contentHelper(BlogSettings blogSettings) throws Exception {
-        return new ContentHelper(blogSettings.getProhibitedTags());
+        return new ContentHelper(blogSettings.getPermittedTags());
     }
 
-    @Bean
+/*    @Bean
     public TagsCacheHandler tagsCacheHandler() throws Exception {
         return new TagsCacheHandler();
-    }
+    }*/
 
     @Bean
     public DdosAtackDefender ddosAtackDefender() throws Exception {
@@ -68,6 +71,27 @@ public class BlogConfig {
     @Bean
     public ImageHelper imageHelper() throws Exception {
         return new ImageHelper();
+    }
+
+    @Bean
+    public MailHelper mailHelper(BlogSettings blogSettings, MailSender mailSender, MessageSource messageSource) throws Exception {
+        return new MailHelper(blogSettings, mailSender, messageSource);
+    }
+
+    // caches for repositories
+    @Bean
+    public CachedTagRepository cachedTagRepository(TagRepository tagRepository) {
+        return new CachedTagRepository(tagRepository);
+    }
+
+    @Bean
+    public CachedPostRepository cachedPostRepository(PostRepository postRepository) {
+        return new CachedPostRepository(postRepository);
+    }
+
+    @Bean
+    public CachedSettingsRepository cachedSettingsRepository(SettingsRepository settingsRepository) {
+        return new CachedSettingsRepository(settingsRepository);
     }
 
 }
