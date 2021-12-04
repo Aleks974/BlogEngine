@@ -17,7 +17,6 @@ public class BlogSettings {
     private String copyrightFrom;
     private TimeZone serverTimeZone;
     private int captchaDeleteTimeout;
-    //private String prohibitedTags;
     private String permittedTags;
     private String uploadDir;
     private String maxUploadSize;

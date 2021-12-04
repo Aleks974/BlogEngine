@@ -1,7 +1,9 @@
 package diplom.blogengine.repository;
 
+import diplom.blogengine.model.PostComment;
 import diplom.blogengine.model.Tag;
 import diplom.blogengine.model.dto.TagCountDto;
+import diplom.blogengine.model.dto.TagDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface TagRepository extends JpaRepository<Tag, Long> {
@@ -41,6 +44,11 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
             "LIMIT 1", nativeQuery = true)
     long findMaxTagCount();
 
-
     Tag findByName(String name);
+
+    @Query(value = "SELECT new diplom.blogengine.model.dto.TagDto(t.name) " +
+            "FROM Tag t " +
+            "JOIN t.posts p " +
+            "WHERE p.id = :postId ")
+    Set<TagDto> findByPostId(@Param("postId") long postId);
 }

@@ -34,7 +34,6 @@ public class BlogConfig {
                 .copyrightFrom(Objects.requireNonNull(blogProp.getCopyrightFrom()))
                 .serverTimeZone(timeZone)
                 .captchaDeleteTimeout(timeout)
-                //.prohibitedTags(Objects.requireNonNull(blogProp.getProhibitedTags()))
                 .permittedTags(Objects.requireNonNull(blogProp.getPermittedTags()))
                 .uploadDir(Objects.requireNonNull(blogProp.getUploadDir()))
                 .maxUploadSize(Objects.requireNonNull(blogProp.getMaxUploadSize()))
@@ -57,10 +56,6 @@ public class BlogConfig {
         return new ContentHelper(blogSettings.getPermittedTags());
     }
 
-/*    @Bean
-    public TagsCacheHandler tagsCacheHandler() throws Exception {
-        return new TagsCacheHandler();
-    }*/
 
     @Bean
     public DdosAtackDefender ddosAtackDefender() throws Exception {
@@ -94,4 +89,8 @@ public class BlogConfig {
         return new CachedSettingsRepository(settingsRepository);
     }
 
+    @Bean
+    public PostsCounterStorage postsCounterStorage() {
+        return new PostsCounterStorage();
+    }
 }

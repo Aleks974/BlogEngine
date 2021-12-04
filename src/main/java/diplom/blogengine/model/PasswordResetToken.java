@@ -41,7 +41,7 @@ public class PasswordResetToken {
     }
 
     private LocalDateTime calcExpiryDate() {
-        return LocalDateTime.now().plus(EXPIRATION_IN_MIN, ChronoUnit.MINUTES);
+        return LocalDateTime.now().plusMinutes(EXPIRATION_IN_MIN);
     }
 
     public boolean isExpired() {

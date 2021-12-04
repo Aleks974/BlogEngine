@@ -1,5 +1,7 @@
 package diplom.blogengine.repository;
 
+import diplom.blogengine.model.dto.PostDto;
+import diplom.blogengine.model.dto.PostDtoExt;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -9,15 +11,16 @@ import org.springframework.data.domain.Sort;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Slf4j
 public class CachedPostRepository {
     private final PostRepository postRepository;
-    private final ConcurrentMap<StoreKey, List<Object[]>> cacheStorePostsData = new ConcurrentHashMap<>();
+    private final ConcurrentMap<StoreKey, List<PostDto>> cacheStorePostsData = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Long> cacheStorePostsCount = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Long, List<Object[]>> cacheStoreSinglePostData = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, PostDtoExt> cacheStoreSinglePostData = new ConcurrentHashMap<>();
 
     public CachedPostRepository(PostRepository postRepository) {
         this.postRepository = postRepository;
@@ -38,7 +41,7 @@ public class CachedPostRepository {
         cacheStoreSinglePostData.remove(id);
     }
 
-    public List<Object[]> findPostsData(Pageable pageRequest) {
+    public List<PostDto> findPostsData(Pageable pageRequest) {
         final StoreKey key = createKey("postsData", pageRequest);
         //log.debug(key.toString());
         return cacheStorePostsData.computeIfAbsent(key, k -> postRepository.findPostsData(pageRequest));
@@ -50,10 +53,14 @@ public class CachedPostRepository {
     }
 
 
-    public List<Object[]> findPostsDataOrderByLikesCount(Pageable pageRequest) {
+    public List<PostDto> findPostsDataOrderByLikesCount(Pageable pageRequest) {
         final StoreKey key = createKey("postsDataOrderByLikesCount", pageRequest);
         //log.debug(key.toString());
         return cacheStorePostsData.computeIfAbsent(key, k -> postRepository.findPostsDataOrderByLikesCount(pageRequest));
+    }
+
+    public List<PostDto> findPostsDataOrderByLikesCount2(Pageable pageRequest) {
+        return postRepository.findPostsDataOrderByLikesCount(pageRequest);
     }
 
     public long getTotalPostsCountExcludeDislikes() {
@@ -62,13 +69,13 @@ public class CachedPostRepository {
     }
 
 
-    public List<Object[]> findPostsDataOrderByCommentsCount(Pageable pageRequest) {
+    public List<PostDto> findPostsDataOrderByCommentsCount(Pageable pageRequest) {
         final StoreKey key = createKey("postsDataOrderByCommentsCount", pageRequest);
         //log.debug(key.toString());
         return cacheStorePostsData.computeIfAbsent(key, k -> postRepository.findPostsDataOrderByCommentsCount(pageRequest));
     }
 
-    public List<Object[]> findPostsByQuery(String query, Pageable pageRequest) {
+    public List<PostDto> findPostsByQuery(String query, Pageable pageRequest) {
         final StoreKey key = createKey("postsByQuery_" + query, pageRequest);
         //log.debug(key.toString());
         return cacheStorePostsData.computeIfAbsent(key, k -> postRepository.findPostsByQuery(query, pageRequest));
@@ -79,7 +86,7 @@ public class CachedPostRepository {
         return cacheStorePostsCount.computeIfAbsent(key, k -> postRepository.getTotalPostsCountByQuery(query));
     }
 
-    public List<Object[]> findPostsByDate(Date date, Pageable pageRequest) {
+    public List<PostDto> findPostsByDate(Date date, Pageable pageRequest) {
         final StoreKey key = createKey("postsByDate_" + date, pageRequest);
         //log.debug(key.toString());
         return cacheStorePostsData.computeIfAbsent(key, k -> postRepository.findPostsByDate(date, pageRequest));
@@ -90,7 +97,7 @@ public class CachedPostRepository {
         return cacheStorePostsCount.computeIfAbsent(key, k -> postRepository.getTotalPostsCountByDate(date));
     }
 
-    public List<Object[]> findPostsByTag(String tag, Pageable pageRequest) {
+    public List<PostDto> findPostsByTag(String tag, Pageable pageRequest) {
         final StoreKey key = createKey("postsByTag_" + tag, pageRequest);
         //log.debug(key.toString());
         return cacheStorePostsData.computeIfAbsent(key, k -> postRepository.findPostsByTag(tag, pageRequest));
@@ -101,7 +108,7 @@ public class CachedPostRepository {
         return cacheStorePostsCount.computeIfAbsent(key, k -> postRepository.getTotalPostsCountByTag(tag));
     }
 
-    public List<Object[]> findPostById(long postId, long authUserId, boolean authUserIsModerator) {
+    public PostDtoExt findPostById(long postId, long authUserId, boolean authUserIsModerator) {
         return cacheStoreSinglePostData.computeIfAbsent(postId, k -> postRepository.findPostById(postId, authUserId, authUserIsModerator));
     }
 

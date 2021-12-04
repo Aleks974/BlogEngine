@@ -62,7 +62,7 @@ public class ApiAuthController {
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(captchaService.generateCaptchaDataAndDeleteOld());
+                .body(captchaService.generateCaptchaData());
     }
 
     @PostMapping("/api/auth/register")

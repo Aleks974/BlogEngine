@@ -19,9 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -499,7 +502,14 @@ public class ApiAuthControllerTest extends ApiControllerRestTest {
     }
 
     private String getPasswordResetToken(long userId) {
-        PasswordResetToken token = passwordTokenRepository.findByUserId(userId);
+       /*String sql = "SELECT * FROM password_reset_tokens WHERE user_id = ?";
+        PasswordResetToken token = (PasswordResetToken) entityManager.createNativeQuery(sql)
+                                    .setParameter(1, userId)
+                                    .getSingleResult();*/
+        String jpqlQuery = "SELECT t FROM PasswordResetToken t WHERE t.user.id = ?1";
+        PasswordResetToken token = entityManager.createQuery(jpqlQuery, PasswordResetToken.class)
+                .setParameter(1, userId)
+                .getSingleResult();
         assertNotNull(token);
         return token.getToken();
     }

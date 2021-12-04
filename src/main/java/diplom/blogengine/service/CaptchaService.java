@@ -20,20 +20,17 @@ public class CaptchaService implements ICaptchaService {
     private final CaptchaCodeRepository captchaCodeRepository;
     private final CaptchaGenerator captchaGenerator;
     private final AuthResponsesMapper responsesMapper;
-    private final BlogSettings blogSettings;
 
     public CaptchaService(CaptchaCodeRepository captchaCodeRepository,
                           CaptchaGenerator captchaGenerator,
-                          AuthResponsesMapper responsesMapper,
-                          BlogSettings blogSettings) {
+                          AuthResponsesMapper responsesMapper) {
         this.captchaCodeRepository = captchaCodeRepository;
         this.captchaGenerator = captchaGenerator;
         this.responsesMapper = responsesMapper;
-        this.blogSettings = blogSettings;
     }
 
     @Override
-    public CaptchaResponse generateCaptchaDataAndDeleteOld() {
+    public CaptchaResponse generateCaptchaData() {
         log.debug("enter generateCaptchaDataAndDeleteOld()");
 
         String code = captchaGenerator.genRandomString();
@@ -46,23 +43,19 @@ public class CaptchaService implements ICaptchaService {
         captchaCode.setTime(LocalDateTime.now());
         captchaCodeRepository.saveAndFlush(captchaCode);
 
-        deleteOldCaptchas();
-
         return responsesMapper.captchaResponse(secretCode, encodedCaptchaString);
     }
 
     private String generateCaptchaString(String text) {
-        return IMAGE_CONTENT_TYPE.concat(", ").concat(captchaGenerator.genCaptchaEncoded(text));
+        String captchaEncoded = captchaGenerator.genCaptchaEncoded(text);
+        return IMAGE_CONTENT_TYPE.concat(", ").concat(captchaEncoded);
     }
 
-    private void deleteOldCaptchas() {
-        log.debug("enter deleteOldCaptchas()");
+    public void deleteExpiryCaptchas(long expireTimeout) {
+        log.debug("enter deleteExpiryCaptchas()");
 
-        int timeout = blogSettings.getCaptchaDeleteTimeout();
-        LocalDateTime time = LocalDateTime.now().minusSeconds(timeout);
-        captchaCodeRepository.deleteOlderThan(time);
+        LocalDateTime time = LocalDateTime.now().minusSeconds(expireTimeout);
+        captchaCodeRepository.deleteExpiryCaptchas(time);
     }
-
-
 }
 

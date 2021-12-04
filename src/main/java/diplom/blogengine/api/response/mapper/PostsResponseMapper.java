@@ -5,13 +5,19 @@ import diplom.blogengine.model.Post;
 import diplom.blogengine.model.PostComment;
 import diplom.blogengine.model.Tag;
 import diplom.blogengine.model.User;
+import diplom.blogengine.model.dto.CommentDto;
+import diplom.blogengine.model.dto.PostDto;
+import diplom.blogengine.model.dto.PostDtoExt;
+import diplom.blogengine.model.dto.TagDto;
 import diplom.blogengine.service.util.TimestampHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Component
@@ -27,68 +33,32 @@ public class PostsResponseMapper {
     public MultiplePostsResponse emptyMultiplePostsResponse() {
         log.debug("enter emptyMultiplePostsResponse()");
 
-        MultiplePostsResponse response = emptyResponse;
-        if (response == null) {
-            synchronized (lock) {
-                if (emptyResponse == null) {
-                    emptyResponse = response = new MultiplePostsResponse(0, Collections.emptyList());
-                }
+        //synchronized (lock) { // синхронизация не требуется, т.к. создаваемый объект не изменяемый
+            if (emptyResponse == null) {
+                emptyResponse = new MultiplePostsResponse(0, List.of());
             }
-        }
-        return response;
+        //}
+        return emptyResponse;
     }
 
-    public MultiplePostsResponse multiplePostsResponse(List<Object[]> postsDataList, long totalPostsCount) {
+   /* public MultiplePostsResponse multiplePostsResponse(List<PostDto> postsDtoList, long totalPostsCount) {
         log.debug("enter multiplePostsResponse()");
 
-        if (postsDataList == null || postsDataList.isEmpty()) {
+        if (postsDtoList == null || postsDtoList.isEmpty()) {
             return emptyMultiplePostsResponse();
         }
         if (totalPostsCount < 0) {
             throw new IllegalArgumentException("totalElements < 0");
         }
-        List<PostResponse> postsResponseList = postsDataList.stream().map(this::postDataToResponse)
+        List<PostResponse> postsResponseList = postsDtoList.stream().map(this::postDtoToResponse)
                                                     .collect(Collectors.toList());
         return new MultiplePostsResponse(totalPostsCount, postsResponseList);
     }
+*/
+    public MultiplePostsResponse multiplePostsResponse(Stream<PostResponse> postResponses, long totalPostsCount) {
+        log.debug("enter multiplePostsResponse()");
 
-    private PostResponse postDataToResponse(Object[] postData) {
-        log.debug("enter postDataToResponse()");
-
-        Objects.requireNonNull(postData, "input postData is null");
-        final int POSTDATA_SIZE = 5;
-        if ( postData.length != POSTDATA_SIZE) {
-            throw new IllegalArgumentException("size of postData is not 5 ");
-        }
-
-        final int POST_INDEX = 0;
-        final int LIKE_COUNT_INDEX = 2;
-        final int DISLIKE_COUNT_INDEX = 3;
-        final int COMMENT_COUNT_INDEX = 4;
-        Post post = (Post)(postData[POST_INDEX]);
-        Objects.requireNonNull(post, "postDataToResponse(): post is null");
-        long likeCount = (Long)(postData[LIKE_COUNT_INDEX]);
-        long dislikeCount = (Long)(postData[DISLIKE_COUNT_INDEX]);
-        long commentCount = (Long)(postData[COMMENT_COUNT_INDEX]);
-
-        log.debug("postDataToResponse(): post: {}, likeCount: {}, dislikeCount: {}, commentCount: {}", post, likeCount, dislikeCount, commentCount);
-
-        long id = post.getId();
-        User user = Objects.requireNonNull(post.getUser(), "User is null for post " + id);
-        UserInfoResponse userInfoResponse = new UserInfoResponse(user.getId(), Objects.requireNonNull(user.getName()));
-        String title = Objects.requireNonNull(post.getTitle(), "Title is null for post " + id);
-
-        return PostResponse.builder()
-                .id(id)
-                .timestamp(timestampHelper.toTimestampAtServerZone(post.getTime()))
-                .user(userInfoResponse)
-                .title(title)
-                .announce(post.getAnnounce())
-                .likeCount(likeCount)
-                .dislikeCount(dislikeCount)
-                .commentCount(commentCount)
-                .viewCount(post.getViewCount())
-                .build();
+        return new MultiplePostsResponse(totalPostsCount, postResponses.collect(Collectors.toList()));
     }
 
     public CalendarPostsResponse calendarPostsResponse(List<Integer> calendarYears, List<Object[]> calendarPostsData) {
@@ -114,42 +84,47 @@ public class PostsResponseMapper {
         return new CalendarPostsResponse(calendarYears, postsCountPerDates);
     }
 
-    public SinglePostResponse singlePostResponse(Post post, long likeCount, long dislikeCount) {
+    public SinglePostResponse singlePostResponse(PostDtoExt postDto, List<CommentDto> comments, Set<TagDto> tags) {
         log.debug("enter singlePostResponse()");
 
-        User user = Objects.requireNonNull(post.getUser(), "Post user is null " + post.getId());
-        UserInfoResponse userResponse = new UserInfoResponse(user.getId(), user.getName());
-        List<PostCommentResponse> comments = Collections.emptyList();
-        if (post.getComments() != null) {
-           comments = post.getComments().stream().map(this::commentToResponse).collect(Collectors.toList());
+        Objects.requireNonNull(postDto, "postDto is null ");
+        UserInfoResponse userResponse = new UserInfoResponse(postDto.getUserId(), postDto.getUserName());
+        List<PostCommentResponse> commentsResponses;
+        if (comments != null) {
+            commentsResponses = comments.stream().map(this::commentDtoToResponse).collect(Collectors.toList());
+        } else {
+            commentsResponses = Collections.emptyList();
         }
-        Set<String> tags = Collections.emptySet();
-        if (post.getTags() != null) {
-            tags = post.getTags().stream().map(Tag::getName).collect(Collectors.toSet());
+        Set<String> tagsResponses;
+        if (tags != null) {
+            tagsResponses = tags.stream().map(TagDto::getName).collect(Collectors.toSet());
+        } else {
+            tagsResponses = Collections.emptySet();
         }
         return SinglePostResponse.builder()
-                .id(post.getId())
-                .timestamp(timestampHelper.toTimestampAtServerZone(post.getTime()))
-                .active(post.isActive())
+                .id(postDto.getId())
+                .timestamp(timestampHelper.toTimestampAtServerZone(postDto.getTime()))
+                .active(postDto.isActive())
                 .user(userResponse)
-                .title(post.getTitle())
-                .text(post.getText())
-                .likeCount(likeCount)
-                .dislikeCount(dislikeCount)
-                .viewCount(post.getViewCount())
-                .comments(comments)
-                .tags(tags)
+                .title(postDto.getTitle())
+                .text(postDto.getText())
+                .likeCount(postDto.getLikeCount())
+                .dislikeCount(postDto.getDislikeCount())
+                .viewCount(postDto.getViewCount())
+                .comments(commentsResponses)
+                .tags(tagsResponses)
                 .build();
     }
 
-    private PostCommentResponse commentToResponse(PostComment comment) {
+    private PostCommentResponse commentDtoToResponse(CommentDto commentDto) {
         log.debug("enter commentToResponse()");
-
-        User user = Objects.requireNonNull(comment.getUser(), "Comment user is null " + comment.getId());
-        UserInfoPhotoResponse userResponse = new UserInfoPhotoResponse(user.getId(), user.getName(), user.getPhoto());
-        return new PostCommentResponse(comment.getId(),
-                                        timestampHelper.toTimestampAtServerZone(comment.getTime()),
-                                        comment.getText(),
+        Objects.requireNonNull(commentDto);
+        UserInfoPhotoResponse userResponse = new UserInfoPhotoResponse(commentDto.getUserId(),
+                                                            commentDto.getUserName(),
+                                                            commentDto.getUserPhoto());
+        return new PostCommentResponse(commentDto.getId(),
+                                        timestampHelper.toTimestampAtServerZone(commentDto.getTime()),
+                                        commentDto.getText(),
                                         userResponse);
     }
 

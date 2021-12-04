@@ -2,8 +2,9 @@ package diplom.blogengine.repository;
 
 import diplom.blogengine.model.ModerationStatus;
 import diplom.blogengine.model.Post;
+import diplom.blogengine.model.dto.PostDto;
+import diplom.blogengine.model.dto.PostDtoExt;
 import diplom.blogengine.model.dto.StatPostsDto;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,7 +24,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                                   "FROM Post p ";
     static final String SELECT_COUNT_POSTS = "SELECT COUNT(distinct p.id) " +
                                              "FROM posts p ";
-    static final String JPQL_SELECT_POSTS_DATA = "SELECT p, u, COUNT(DISTINCT CASE WHEN (v.value = 1) THEN v.id ELSE NULL END) AS like_count, COUNT(DISTINCT CASE WHEN (v.value = -1) THEN v.id ELSE NULL END) AS dislike_count,  COUNT(DISTINCT c.id) AS comment_count " +
+    //static final String JPQL_SELECT_POSTS_DATA = "SELECT p, u, COUNT(DISTINCT CASE WHEN (v.value = 1) THEN v.id ELSE NULL END) AS like_count, COUNT(DISTINCT CASE WHEN (v.value = -1) THEN v.id ELSE NULL END) AS dislike_count,  COUNT(DISTINCT c.id) AS comment_count " +
+    static final String JPQL_SELECT_POSTS_DATA = "SELECT new diplom.blogengine.model.dto.PostDto(p.id, p.time, p.title, p.announce, COUNT(DISTINCT CASE WHEN (v.value = 1) THEN v.id ELSE NULL END) AS like_count, COUNT(DISTINCT CASE WHEN (v.value = -1) THEN v.id ELSE NULL END) AS dislike_count,  COUNT(DISTINCT c.id) AS comment_count, p.viewCount, u.id, u.name) " +
                                                  "FROM Post p " +
                                                  "JOIN p.user u " +
                                                  "LEFT JOIN p.votes v " +
@@ -33,6 +35,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     static final String JPQL_SELECT_STATISTICS_DATA = "SELECT new diplom.blogengine.model.dto.StatPostsDto(COUNT(distinct p.id), SUM(p.viewCount), MIN(p.time)) " +
                                                         "FROM Post p " +
                                                         "JOIN p.user u ";
+    static final String JPQL_SELECT_SINGLE_POST_DATA = "SELECT new diplom.blogengine.model.dto.PostDtoExt(p.id, p.time, p.title, p.announce, COUNT(DISTINCT CASE WHEN (v.value = 1) THEN v.id ELSE NULL END) AS like_count, COUNT(DISTINCT CASE WHEN (v.value = -1) THEN v.id ELSE NULL END) AS dislike_count,  0L, p.viewCount, p.text, p.isActive, u.id, u.name) " +
+                                                "FROM Post p " +
+                                                "JOIN p.user u " +
+                                                "LEFT JOIN p.votes v ";
 
 
     static final String JPQL_JOIN_P_TAGS = " JOIN p.tags t ";
@@ -52,7 +58,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     static final String GROUP_BY_P_ID = " GROUP BY p.id ";
 
-    static final String HAVING_VOTES_LIKE = " HAVING col_2_0_ > 0 OR (col_2_0_ = 0 AND col_3_0_ = 0) ";
+    static final String HAVING_VOTES_LIKE = " HAVING col_4_0_ > 0 OR (col_4_0_ = 0 AND col_5_0_ = 0) ";
+    //static final String HAVING_VOTES_LIKE = " HAVING like_count > 0 OR (like_count = 0 AND dislike_count = 0) ";
 
     static final String ORDER_BY_LIKE_COUNT = " ORDER BY like_count DESC ";
     static final String ORDER_BY_COMMENT_COUNT = " ORDER BY comment_count DESC ";
@@ -62,7 +69,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(JPQL_SELECT_POSTS_DATA +
            JPQL_WHERE_GENERAL +
            GROUP_BY_P_ID)
-    List<Object[]> findPostsData(Pageable pageRequestWithSort);
+    List<PostDto> findPostsData(Pageable pageRequestWithSort);
+    //List<Object[]> findPostsData(Pageable pageRequestWithSort);
 
     @Query(JPQL_SELECT_COUNT_POSTS +
            JPQL_WHERE_GENERAL)
@@ -73,7 +81,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             JPQL_WHERE_USERID_AND_NOTACTIVE +
             GROUP_BY_P_ID +
             ORDER_BY_TIME)
-    List<Object[]> findMyPostsNotActiveData(Pageable pageRequest, @Param("authUserId") long authUserId);
+    List<PostDto> findMyPostsNotActiveData(Pageable pageRequest, @Param("authUserId") long authUserId);
 
     @Query(value = SELECT_COUNT_POSTS +
                    WHERE_USERID_AND_NOTACTIVE,
@@ -85,7 +93,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             JPQL_WHERE_USERID_AND_ACTIVE_AND_STATUS +
             GROUP_BY_P_ID +
             ORDER_BY_TIME)
-    List<Object[]> findMyPostsData(Pageable pageRequest,
+    List<PostDto> findMyPostsData(Pageable pageRequest,
                                     @Param("authUserId") long authUserId,
                                     @Param("moderationStatus") ModerationStatus moderationStatus);
 
@@ -100,7 +108,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            GROUP_BY_P_ID +
            HAVING_VOTES_LIKE +
            ORDER_BY_LIKE_COUNT)
-    List<Object[]> findPostsDataOrderByLikesCount(Pageable pageRequest);
+    List<PostDto> findPostsDataOrderByLikesCount(Pageable pageRequest);
 
     @Query(JPQL_SELECT_COUNT_POSTS +
            JPQL_JOIN_P_VOTES +
@@ -113,13 +121,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             JPQL_WHERE_GENERAL +
             GROUP_BY_P_ID +
             ORDER_BY_COMMENT_COUNT)
-    List<Object[]> findPostsDataOrderByCommentsCount(Pageable pageRequest);
+    List<PostDto> findPostsDataOrderByCommentsCount(Pageable pageRequest);
 
 
     @Query(JPQL_SELECT_POSTS_DATA +
            JPQL_WHERE_GENERAL + WHERE_SEARCH_BY_PARAM_QUERY +
            GROUP_BY_P_ID)
-    List<Object[]> findPostsByQuery(@Param("query") String query, Pageable pageRequestWithSort);
+    List<PostDto> findPostsByQuery(@Param("query") String query, Pageable pageRequestWithSort);
 
     @Query(JPQL_SELECT_COUNT_POSTS +
             JPQL_WHERE_GENERAL + WHERE_SEARCH_BY_PARAM_QUERY)
@@ -129,7 +137,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(JPQL_SELECT_POSTS_DATA +
            JPQL_WHERE_GENERAL + WHERE_SEARCH_BY_PARAM_DATE +
            GROUP_BY_P_ID)
-    List<Object[]> findPostsByDate(@Param("date") Date date, Pageable pageRequestWithSort);
+    List<PostDto> findPostsByDate(@Param("date") Date date, Pageable pageRequestWithSort);
 
     @Query(JPQL_SELECT_COUNT_POSTS +
             JPQL_WHERE_GENERAL + WHERE_SEARCH_BY_PARAM_DATE)
@@ -140,7 +148,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            JPQL_JOIN_P_TAGS +
            JPQL_WHERE_GENERAL + WHERE_SEARCH_BY_PARAM_TAG +
            GROUP_BY_P_ID)
-    List<Object[]> findPostsByTag(@Param("tag") String tag, Pageable pageRequestWithSort);
+    List<PostDto> findPostsByTag(@Param("tag") String tag, Pageable pageRequestWithSort);
 
     @Query(JPQL_SELECT_COUNT_POSTS +
            JPQL_JOIN_P_TAGS +
@@ -162,15 +170,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "ORDER BY posts_date DESC")
     List<Object[]> findPostsCountPerDateByYear(@Param("year" ) Integer year);
 
-    @Query("SELECT p, u, COUNT(CASE WHEN (v.value = 1) THEN 1 ELSE NULL END) AS like_count, COUNT(CASE WHEN (v.value = -1) THEN 1 ELSE NULL END) AS dislike_count " +
-            "FROM Post p " +
-            "JOIN p.user u " +
-            "LEFT JOIN p.votes v " +
+    @Query(JPQL_SELECT_SINGLE_POST_DATA +
             "WHERE  p.id = :id " +
             "AND (:authUserIsModerator = TRUE OR :authUserId = u.id OR p.isActive = 1) " +
             "AND p.moderationStatus = 'ACCEPTED' AND p.time <= NOW() " +
             "GROUP BY p.id")
-    List<Object[]> findPostById(@Param("id") long id, @Param("authUserId") long authUserId,  @Param("authUserIsModerator") boolean authUserIsModerator);
+    PostDtoExt findPostById(@Param("id") long id, @Param("authUserId") long authUserId, @Param("authUserIsModerator") boolean authUserIsModerator);
 
     @Modifying
     @Transactional
@@ -203,7 +208,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             JPQL_WHERE_ACTIVE_AND_STATUS_OR_MODERATORID_AND_STATUS +
             GROUP_BY_P_ID +
             ORDER_BY_TIME)
-    List<Object[]> findModerationPostsData(Pageable pageRequest,
+    List<PostDto> findModerationPostsData(Pageable pageRequest,
                                            long authUserId,
                                            @Param("moderationStatus") ModerationStatus moderationStatus,
                                            @Param("moderationStatusStr") String moderationStatusStr);

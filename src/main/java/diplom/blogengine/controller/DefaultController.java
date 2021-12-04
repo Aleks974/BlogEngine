@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Slf4j
 @Controller
 public class DefaultController {
-    @GetMapping({"/", "/posts/**", "/tag/**", "/calendar/**", "/stat/**", "/search/**", "/login/**", "/logout/**",
+    @GetMapping({"/", "/posts/**", "/post/**", "/tag/**", "/calendar/**", "/stat/**", "/search/**", "/login/**", "/logout/**",
             "settings/**", "/profile/**", "/add/**", "/my/**", "/moderation/**"})
     public String index() {
         return "index";

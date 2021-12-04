@@ -6,6 +6,7 @@ import diplom.blogengine.api.request.UserRegisterDataRequest;
 import diplom.blogengine.api.request.UserResetPasswordRequest;
 import diplom.blogengine.api.response.ResultResponse;
 import diplom.blogengine.api.response.mapper.ResultResponseMapper;
+import diplom.blogengine.config.BlogSettings;
 import diplom.blogengine.exception.UserNotFoundException;
 import diplom.blogengine.exception.ValidationException;
 import diplom.blogengine.model.PasswordResetToken;
@@ -34,6 +35,7 @@ public class UserService implements IUserService {
     private final static int MIN_PASSWORD_LENGTH = 6;
     private final static Pattern NAME_PATTERN = Pattern.compile("(?i)^[a-zA-Zа-яА-Я]+[a-zA-Zа-яА-Я.]{2,}$");
 
+    private final BlogSettings blogSettings;
     private final UserRepository userRepository;
     private final CachedPostRepository cachedPostRepository;
     private final PasswordTokenRepository passwordTokenRepository;
@@ -44,7 +46,8 @@ public class UserService implements IUserService {
     private final MessageSource messageSource;
     private final MailHelper mailHelper;
 
-    public UserService(UserRepository userRepository,
+    public UserService(BlogSettings blogSettings,
+                       UserRepository userRepository,
                        CachedPostRepository cachedPostRepository,
                        PasswordTokenRepository passwordTokenRepository,
                        CaptchaCodeRepository captchaCodeRepository,
@@ -53,6 +56,7 @@ public class UserService implements IUserService {
                        PasswordEncoder passwordEncoder,
                        MessageSource messageSource,
                        MailHelper mailHelper) {
+        this.blogSettings = blogSettings;
         this.userRepository = userRepository;
         this.cachedPostRepository = cachedPostRepository;
         this.passwordTokenRepository = passwordTokenRepository;
@@ -296,9 +300,10 @@ public class UserService implements IUserService {
     }
 
     private boolean captchaIsValid(String inputCode, String secretCode) {
-        log.debug("enter checkCaptcha()");
+        log.debug("enter captchaIsValid()");
 
-        String code = captchaCodeRepository.findCodeBySecret(secretCode);
+        LocalDateTime expiryDate = LocalDateTime.now().minusSeconds(blogSettings.getCaptchaDeleteTimeout());
+        String code = captchaCodeRepository.findCodeBySecretAndNotExpired(secretCode, expiryDate);
         return code != null && code.equals(inputCode);
     }
 

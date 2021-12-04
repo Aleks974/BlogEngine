@@ -17,7 +17,7 @@ public class PostResponse {
     private long likeCount;
     private long dislikeCount;
     private long commentCount;
-    private long viewCount;
+    private int viewCount;
 
     @JsonPOJOBuilder(withPrefix = "")
     public static class PostResponseBuilder {

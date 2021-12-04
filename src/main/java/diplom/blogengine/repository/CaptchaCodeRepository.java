@@ -23,12 +23,18 @@ public interface CaptchaCodeRepository extends JpaRepository<CaptchaCode, Long> 
     @Transactional
     @Query(value = "DELETE " +
             "FROM captcha_codes c " +
-            "WHERE c.time < :time ", nativeQuery = true)
-    int deleteOlderThan(LocalDateTime time);
+            "WHERE c.time <= :time ", nativeQuery = true)
+    int deleteExpiryCaptchas(LocalDateTime time);
 
     @Query(value = "SELECT c.code " +
             "FROM captcha_codes c " +
             "WHERE c.secret_code = :secretCode " +
             "LIMIT 1", nativeQuery = true)
     String findCodeBySecret(@Param("secretCode") String secretCode);
+
+    @Query(value = "SELECT c.code " +
+            "FROM captcha_codes c " +
+            "WHERE c.secret_code = :secretCode AND c.time > :expiredTime " +
+            "LIMIT 1", nativeQuery = true)
+    String findCodeBySecretAndNotExpired(@Param("secretCode") String secretCode, @Param("expiredTime") LocalDateTime expiredTime);
 }
