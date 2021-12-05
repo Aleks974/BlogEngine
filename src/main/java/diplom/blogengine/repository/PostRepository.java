@@ -40,7 +40,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                                 "JOIN p.user u " +
                                                 "LEFT JOIN p.votes v ";
 
-
     static final String JPQL_JOIN_P_TAGS = " JOIN p.tags t ";
     static final String JPQL_JOIN_P_VOTES = " LEFT JOIN p.votes v ";
 
@@ -70,7 +69,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            JPQL_WHERE_GENERAL +
            GROUP_BY_P_ID)
     List<PostDto> findPostsData(Pageable pageRequestWithSort);
-    //List<Object[]> findPostsData(Pageable pageRequestWithSort);
 
     @Query(JPQL_SELECT_COUNT_POSTS +
            JPQL_WHERE_GENERAL)
@@ -171,9 +169,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Object[]> findPostsCountPerDateByYear(@Param("year" ) Integer year);
 
     @Query(JPQL_SELECT_SINGLE_POST_DATA +
-            "WHERE  p.id = :id " +
-            "AND (:authUserIsModerator = TRUE OR :authUserId = u.id OR p.isActive = 1) " +
-            "AND p.moderationStatus = 'ACCEPTED' AND p.time <= NOW() " +
+            "WHERE p.id = :id AND (:authUserIsModerator = TRUE OR :authUserId = u.id OR " +
+            "(p.isActive = 1 AND p.moderationStatus = 'ACCEPTED' AND p.time <= NOW())) " +
             "GROUP BY p.id")
     PostDtoExt findPostById(@Param("id") long id, @Param("authUserId") long authUserId, @Param("authUserIsModerator") boolean authUserIsModerator);
 

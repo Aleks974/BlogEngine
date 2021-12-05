@@ -4,6 +4,8 @@ import config.H2JpaConfig;
 import diplom.blogengine.Application;
 import diplom.blogengine.model.Tag;
 import diplom.blogengine.repository.TagRepository;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +31,14 @@ public class TagRepositoryTest {
     private TagRepository tagRepository;
 
     private TestDataGenerator testDataGenerator = new TestDataGenerator();
+
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
 
     @Test
     public void givenTag_WhenSaveAndRetrieveTag_thenOk() {

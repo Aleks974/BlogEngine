@@ -3,7 +3,9 @@ package integration;
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
 import diplom.blogengine.config.BlogSettings;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,6 +38,13 @@ public class ApiGeneralControllerTest {
     @Autowired
     private BlogSettings blogSettings;
 
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
 
     @Test
     public void whenGetInitOptions_thenOk() throws Exception {

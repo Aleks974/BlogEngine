@@ -7,12 +7,8 @@ import diplom.blogengine.api.response.AuthResponse;
 import diplom.blogengine.api.response.CaptchaResponse;
 import diplom.blogengine.api.response.ResultResponse;
 import diplom.blogengine.api.response.UserInfoAuthResponse;
-import diplom.blogengine.model.CaptchaCode;
-import diplom.blogengine.model.PasswordResetToken;
-import diplom.blogengine.model.User;
-import diplom.blogengine.repository.CaptchaCodeRepository;
-import diplom.blogengine.repository.PasswordTokenRepository;
-import diplom.blogengine.repository.UserRepository;
+import diplom.blogengine.model.*;
+import diplom.blogengine.repository.*;
 import diplom.blogengine.service.util.MailHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -37,7 +33,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
-public class ApiAuthControllerTest extends ApiControllerRestTest {
+public class ApiAuthControllerRestTest extends ApiControllerRestTest {
     @Autowired
     private CaptchaCodeRepository captchaCodeRepository;
 
@@ -45,14 +41,38 @@ public class ApiAuthControllerTest extends ApiControllerRestTest {
     private UserRepository userRepository;
 
     @Autowired
+    private SettingsRepository settingsRepository;
+
+    @Autowired
+    private CachedSettingsRepository cachedSettingsRepository;
+
+    @Autowired
     private PasswordTokenRepository passwordTokenRepository;
 
     @MockBean
     private MailHelper mailHelper;
+
+    // /api/auth/login
+
+    @Test
+    public void givenBadCredentialsWhileLogin_whenSendPostLogin_thenResultFalse() throws Exception {
+        String wrongEmail = "wrong@rr.ru";
+        loginUserFailAndAssert(wrongEmail, user3Pass);
+
+        String wrongPass = "wrongpassword";
+        loginUserFailAndAssert(user3Email, wrongPass);
+    }
+
+    @Test
+    public void givenCorrectCredentialsWhileLogin_whenSendPostLogin_thenResultTrueAndCookie() throws Exception {
+        String cookie = getCookieAfterSuccessLogin(user3Email, user3Pass);
+        assertNotNull(cookie);
+    }
+
     // /api/auth/check
 
     @Test
-    public void givenNotAuth_whenSendGetAuthCheck_thendResultFalse() throws Exception {
+    public void givenNotAuth_whenSendGetAuthCheck_thenResultFalse() throws Exception {
         String notAuth = "";
         ResponseEntity<AuthResponse> responseEntity = sendGetAuthCheck(notAuth);
         assertStatusOkAndContentTypeJson(responseEntity);
@@ -144,6 +164,9 @@ public class ApiAuthControllerTest extends ApiControllerRestTest {
 
     @Test
     public void givenUserRegisterRequestAndWrongCaptchaCode_whenSendPostRegister_then400BadRequestUserNotSaved() throws Exception {
+        cachedSettingsRepository.clearAllCache();
+        setMultiuserMode(true);
+
         CaptchaCode captcha = generateAndSaveCaptchaCode();
         String wrongCode = "wrong";
         UserRegisterDataRequest request = testDataGenerator.generateUserRegisterDataRequest(wrongCode, captcha.getSecretCode());
@@ -222,7 +245,48 @@ public class ApiAuthControllerTest extends ApiControllerRestTest {
     }
 
     @Test
+    public void givenUserLoginAndUserRegisterRequestAndCaptcha_whenSendPostRegister_then404NotFound() throws Exception {
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+        UserRegisterDataRequest request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
+
+        ResponseEntity<ResultResponse> responseEntity = sendPostUserRegister(request);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+        ResultResponse response = responseEntity.getBody();
+        assertTrue(response.getResult());
+
+        long expectedCount = 4;
+        assertEquals(expectedCount, userRepository.count());
+
+        String expectedEmail = request.getEmail();
+        assertTrue(userRepository.findByEmail(expectedEmail).isPresent());
+    }
+
+
+    @Test
+    public void givenUserRegisterRequestAndMultiuserModeIsOff_whenSendPostRegister_then404AndUserNotSaved() throws Exception {
+        cachedSettingsRepository.clearAllCache();
+        setMultiuserMode(false);
+
+        System.out.println(settingsRepository.findByCode(SettingsCode.MULTIUSER_MODE));
+
+        CaptchaCode captcha = generateAndSaveCaptchaCode();
+        UserRegisterDataRequest request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
+
+        ResponseEntity<ResultResponse> responseEntity = sendPostUserRegister(request);
+        assertEquals(HttpStatus.NOT_FOUND, responseEntity.getStatusCode());
+
+        long expectedCount = 3;
+        assertEquals(expectedCount, userRepository.count());
+    }
+
+
+
+    @Test
     public void givenUserRegisterRequestAndCaptcha_whenSendPostRegister_thenUserSaved() throws Exception {
+        cachedSettingsRepository.clearAllCache();
+        setMultiuserMode(true);
+
         CaptchaCode captcha = generateAndSaveCaptchaCode();
         UserRegisterDataRequest request = testDataGenerator.generateUserRegisterDataRequest(captcha.getCode(), captcha.getSecretCode());
 
@@ -437,15 +501,22 @@ public class ApiAuthControllerTest extends ApiControllerRestTest {
         return testRestTemplate.exchange(uri, HttpMethod.GET, entity, AuthResponse.class);
     }
 
-    private ResponseEntity<ResultResponse> sendPostUserRegister(UserRegisterDataRequest request) {
+    private ResponseEntity<ResultResponse> sendPostUserRegister(UserRegisterDataRequest request, String...cookie) {
         String resourceUrl = "/api/auth/register";
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(host)
                 .path(resourceUrl)
                 .build()
                 .toUri();
+        HttpEntity<UserRegisterDataRequest> entity;
+        if (cookie != null && cookie.length == 1) {
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.set("Cookie", cookie[0]);
+            entity = new HttpEntity<>(request, httpHeaders);
+        } else {
+            entity = new HttpEntity<>(request);
+        }
         TestRestTemplate testRestTemplate = new TestRestTemplate();
-        HttpEntity<UserRegisterDataRequest> entity = new HttpEntity<>(request);
         return testRestTemplate.exchange(uri, HttpMethod.POST, entity, ResultResponse.class);
     }
 
@@ -525,6 +596,15 @@ public class ApiAuthControllerTest extends ApiControllerRestTest {
         CaptchaCode captchaCode = captchaCodeRepository.saveAndFlush(testDataGenerator.generateCaptchaCode());
         return captchaCode;
     }
+
+
+    private void setMultiuserMode(boolean isOn) {
+        GlobalSetting setting = settingsRepository.findByCode(SettingsCode.MULTIUSER_MODE);
+        final String VALUE = isOn ? "YES" : "NO";
+        setting.setValue(VALUE);
+        settingsRepository.saveAndFlush(setting);
+    }
+
 
     private String createExpiredToken(long userId) {
         User user = userRepository.findById(userId).get();

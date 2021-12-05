@@ -4,6 +4,8 @@ import config.H2JpaConfig;
 import diplom.blogengine.Application;
 import diplom.blogengine.model.CaptchaCode;
 import diplom.blogengine.repository.CaptchaCodeRepository;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,6 +44,14 @@ public class CaptchaCodeRepositoryTest {
     private TransactionTemplate transactionTemplate;
 
     private TestDataGenerator testDataGenerator = new TestDataGenerator();
+
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
 
     @Test
     public void givenCaptchaCode_WhenSaveCaptchaCode_thenOk() {

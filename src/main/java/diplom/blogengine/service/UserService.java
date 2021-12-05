@@ -23,6 +23,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ import java.util.regex.Pattern;
 @Service
 public class UserService implements IUserService {
     private final static int MIN_PASSWORD_LENGTH = 6;
-    private final static Pattern NAME_PATTERN = Pattern.compile("(?i)^[a-zA-Zа-яА-Я]+[a-zA-Zа-яА-Я.]{2,}$");
+    private final static Pattern NAME_PATTERN = Pattern.compile("(?i)^[a-zA-Zа-яА-Я]+[a-zA-Zа-яА-Я.\\s]{2,}$");
 
     private final BlogSettings blogSettings;
     private final UserRepository userRepository;
@@ -68,6 +69,7 @@ public class UserService implements IUserService {
         this.mailHelper = mailHelper;
     }
 
+    @Transactional
     @Override
     public ResultResponse registerUser(UserRegisterDataRequest userData, Locale locale) {
         log.debug("enter registerUser()");
@@ -79,10 +81,12 @@ public class UserService implements IUserService {
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
-        saveUser(convertDtoToUser(userData));
+        userRepository.saveAndFlush(convertDtoToUser(userData));
+
         return responsesMapper.success();
     }
 
+    @Transactional
     @Override
     public ResultResponse saveProfile(UserProfileDataRequest userData,
                                       UserDetailsExt authUser,
@@ -143,13 +147,14 @@ public class UserService implements IUserService {
         if (doUpdatePassword) {
             updateUser.setPassword(passwordEncoder.encode(newPassword));
         }
-        userRepository.save(updateUser);
+        userRepository.saveAndFlush(updateUser);
 
         cachedPostRepository.clearAllCache();
 
         return responsesMapper.success();
     }
 
+    @Transactional
     @Override
     public ResultResponse resetPassword(UserResetPasswordRequest resetPasswordRequest, Locale locale) {
         log.debug("enter resetPasswordSendToken()");
@@ -158,17 +163,17 @@ public class UserService implements IUserService {
         Objects.requireNonNull(locale, "locale is null");
 
         String email = resetPasswordRequest.getEmail();
-        // ToDo возвращать id юзера и использовать getReference
         User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException(email));
 
         String token = UUID.randomUUID().toString();
         PasswordResetToken passwordResetToken = new PasswordResetToken(token, user);
-        passwordTokenRepository.save(passwordResetToken);
+        passwordTokenRepository.saveAndFlush(passwordResetToken);
 
         mailHelper.sendResetPasswordEmail(email, token, locale);
         return responsesMapper.success();
     }
 
+    @Transactional
     @Override
     public ResultResponse saveNewPassword(UserNewPasswordRequest newPasswordRequest, Locale locale) {
         log.debug("enter saveNewPassword()");
@@ -194,6 +199,7 @@ public class UserService implements IUserService {
         User user = passwordResetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.saveAndFlush(user);
+
         return responsesMapper.success();
     }
 
@@ -208,12 +214,6 @@ public class UserService implements IUserService {
         boolean isModerator = false;
         user.setModerator(isModerator);
         return user;
-    }
-
-    private User saveUser(User user) {
-        log.debug("enter saveUser()");
-
-        return userRepository.save(user);
     }
 
     private Map<String, String> validateUserRegisterData(UserRegisterDataRequest userData, Locale locale) {
@@ -237,6 +237,8 @@ public class UserService implements IUserService {
     }
 
     private boolean validateName(String name, Map<String, String> errors, Locale locale) {
+        log.debug("enter validateName()");
+
         boolean valid = true;
         if (name == null) {
             return true;

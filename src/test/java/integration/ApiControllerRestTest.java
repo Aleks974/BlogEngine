@@ -3,17 +3,18 @@ package integration;
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
 import diplom.blogengine.api.request.UserLoginRequest;
+import diplom.blogengine.api.request.UserRegisterDataRequest;
 import diplom.blogengine.api.response.AuthResponse;
+import diplom.blogengine.api.response.MultiplePostsResponse;
 import diplom.blogengine.api.response.ResultResponse;
+import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.config.BlogSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -29,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -127,6 +129,22 @@ public class ApiControllerRestTest {
         ResultResponse response = responseEntity.getBody();
         assertFalse(response.getResult());
         assertNotNull(response.getErrors());
+    }
+
+    public ResponseEntity<SinglePostResponse> sendGetPost(long postId, String...cookie) {
+        String resourceUrl = "/api/post/" + postId;
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(host)
+                .path(resourceUrl)
+                .build()
+                .toUri();
+        HttpHeaders httpHeaders = new HttpHeaders();
+        if (cookie != null && cookie.length == 1) {
+            httpHeaders.set("Cookie", cookie[0]);
+        }
+        HttpEntity<UserRegisterDataRequest> entity = new HttpEntity<>(httpHeaders);
+        TestRestTemplate testRestTemplateLocal = new TestRestTemplate();
+        return testRestTemplateLocal.exchange(uri, HttpMethod.GET, entity, SinglePostResponse.class);
     }
 
     protected void clearTmpUploadDir() throws IOException {

@@ -2,7 +2,9 @@ package integration;
 
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -41,6 +43,13 @@ public class ApiTagControllerTest {
     private final String TAG4_TITLE = "JUnit";
     private final double TAG4_WEIGHT = 0;
 
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
 
     @Test
     public void givenIllegalLengthQuery_whenGetTags_thenBadRequest() throws Exception {

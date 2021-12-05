@@ -2,6 +2,8 @@ package integration;
 
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,6 +25,14 @@ public class DefaultControllerTest {
 
     @Autowired
     private MockMvc mvc;
+
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
 
     @Test
     public void whenGetIndexPage_thenOk() throws Exception {

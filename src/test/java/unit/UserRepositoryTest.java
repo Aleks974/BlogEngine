@@ -2,8 +2,12 @@ package unit;
 
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
+import diplom.blogengine.model.Role;
 import diplom.blogengine.model.User;
+import diplom.blogengine.repository.RoleRepository;
 import diplom.blogengine.repository.UserRepository;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,6 +15,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import util.TestDataGenerator;
+
+import javax.persistence.EntityGraph;
+import javax.persistence.EntityManager;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,28 +37,57 @@ public class UserRepositoryTest {
     private UserRepository userRepository;
 
     @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private EntityManager entityManager;
 
     private TestDataGenerator testDataGenerator = new TestDataGenerator();
 
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
+
     @Test
-    public void givenUser_WhenSaveAndFindById_thenOk() {
+    public void givenUserAndRole_WhenSaveAndFindById_thenOk() {
         // given
+        Role role = testDataGenerator.generateRole();
+        role = roleRepository.saveAndFlush(role);
         User user = testDataGenerator.generateUser();
+        Set<Role> roles = Collections.singleton(role);
+        user.setRoles(roles);
         user = userRepository.saveAndFlush(user);
 
+        EntityGraph<User> graph = entityManager.createEntityGraph(User.class);
+        graph.addAttributeNodes("roles");
+        Map<String, Object> hints = new HashMap<>();
+        hints.put("javax.persistence.fetchgraph", graph);
+
         // when
-        User foundUser = userRepository.findById(user.getId()).get();
+        User foundUser = entityManager.find(User.class, user.getId(), hints);
 
         // then
         assertNotNull(foundUser);
         assertEquals(user.getName(), foundUser.getName());
+
+        assertEquals(roles, foundUser.getRoles());
     }
 
     @Test
     public void givenUser_WhenSaveAndFindByEmail_thenOk() {
         // given
+        Role role = testDataGenerator.generateRole();
+        role = roleRepository.saveAndFlush(role);
         User user = testDataGenerator.generateUser();
+        Set<Role> roles = Collections.singleton(role);
+        user.setRoles(roles);
         user = userRepository.saveAndFlush(user);
 
         // when
@@ -63,7 +100,11 @@ public class UserRepositoryTest {
     @Test
     public void givenUser_WhenSaveAndFindByName_thenOk() {
         // given
+        Role role = testDataGenerator.generateRole();
+        role = roleRepository.saveAndFlush(role);
         User user = testDataGenerator.generateUser();
+        Set<Role> roles = Collections.singleton(role);
+        user.setRoles(roles);
         user = userRepository.saveAndFlush(user);
 
         // when

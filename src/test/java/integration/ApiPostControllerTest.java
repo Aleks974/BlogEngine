@@ -2,19 +2,31 @@ package integration;
 
 import config.H2JpaConfig;
 import diplom.blogengine.Application;
+import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.service.MyPostStatus;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
@@ -41,6 +53,14 @@ public class ApiPostControllerTest {
     private final String POST3_TITLE = "Пост3";
     private final String POST4_TITLE = "Пост4";
 
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
+
     @Test
     public void givenNegativeOffset_whenGetPosts_thenBadRequest() throws Exception {
         mvc.perform(get("/api/post/?offset=-1"))
@@ -48,14 +68,12 @@ public class ApiPostControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-
     @Test
     public void givenNegativeLimit_whenGetPosts_thenBadRequest() throws Exception {
         mvc.perform(get("/api/post/?limit=-1"))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
     }
-
 
     @Test
     public void givenIllegalMode_whenGetPosts_thenBadRequest() throws Exception {
@@ -142,7 +160,7 @@ public class ApiPostControllerTest {
     @Test
     public void whenGetPostsByQuery_thenOk() throws Exception {
         final int QUERY_POSTS_COUNT = 2;
-        final String QUERY = "Текст для поиска";
+        final String QUERY = "для";
         mvc.perform(get("/api/post/search?offset=0&limit=20&query=" + QUERY))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -199,7 +217,7 @@ public class ApiPostControllerTest {
         final int POST_ID = 2;
         final int LIKE_COUNT = 0;
         final int DISLIKE_COUNT = 1;
-        final int VIEW_COUNT = 1;
+        final int VIEW_COUNT = 2;
         mvc.perform(get("/api/post/" + POST_ID))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -210,7 +228,6 @@ public class ApiPostControllerTest {
                 .andExpect(jsonPath("$.dislikeCount", Matchers.is(DISLIKE_COUNT)))
                 .andExpect(jsonPath("$.viewCount", Matchers.is(VIEW_COUNT)));
     }
-
 
     @Test
     public void givenNotExistedId_whenGetSinglePost_then404() throws Exception {

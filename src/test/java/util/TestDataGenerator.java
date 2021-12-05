@@ -2,6 +2,8 @@ package util;
 
 import diplom.blogengine.api.request.*;
 import diplom.blogengine.model.*;
+import diplom.blogengine.model.dto.PostDto;
+import diplom.blogengine.model.dto.PostDtoExt;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.LinkedMultiValueMap;
@@ -40,18 +42,19 @@ public class TestDataGenerator {
     }
 
     public User generateUser(){
-        Role role = new Role();
-        role.setName("ROLE_USER");
-
         User user = new User();
         user.setModerator(false);
         user.setRegTime(LocalDateTime.now());
         user.setName("vasya");
         user.setEmail("test@test.ru");
         user.setPassword(passwordEncoder.encode("password"));
-        user.setRoles(Collections.singleton(role));
-
         return user;
+    }
+
+    public Role generateRole() {
+        Role role = new Role();
+        role.setName("ROLE_USER");
+        return role;
     }
 
     public Tag generateTag(){
@@ -161,4 +164,20 @@ public class TestDataGenerator {
         return request;
     }
 
+    public PostDtoExt generatePostDtoExt() {
+        final long id = 1;
+        final LocalDateTime time = LocalDateTime.now();
+        final String title = "Название поста";
+        final String announce = "Аннонс поста";
+        final long dislikeCount = 1;
+        final long likeCount = 4;
+        final long commentCount = 5;
+        int viewCount = 10;
+        final long userId = 3;
+        final String userName = "Ivan Egorov";
+        final String text = "Полный текст поста";
+        final boolean isActive = true;
+
+        return new PostDtoExt(id, time, title, announce, likeCount, dislikeCount, commentCount, viewCount, text, isActive, userId, userName);
+    }
 }

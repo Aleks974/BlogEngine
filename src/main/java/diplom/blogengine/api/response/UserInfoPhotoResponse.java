@@ -1,8 +1,6 @@
 package diplom.blogengine.api.response;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreType;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.*;
 import lombok.Getter;
 
 @Getter
@@ -12,7 +10,10 @@ public class UserInfoPhotoResponse {
     private final String name;
     private final String photo;
 
-    public UserInfoPhotoResponse(long id, String name, String photo) {
+    @JsonCreator
+    public UserInfoPhotoResponse(@JsonProperty("id") long id,
+                                 @JsonProperty("name") String name,
+                                 @JsonProperty("photo") String photo) {
         this.id = id;
         this.name = name;
         this.photo = photo;

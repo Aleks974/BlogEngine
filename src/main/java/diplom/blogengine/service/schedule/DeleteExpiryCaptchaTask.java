@@ -1,4 +1,4 @@
-package diplom.blogengine.service.util.schedule;
+package diplom.blogengine.service.schedule;
 
 import diplom.blogengine.service.ICaptchaService;
 import lombok.extern.slf4j.Slf4j;

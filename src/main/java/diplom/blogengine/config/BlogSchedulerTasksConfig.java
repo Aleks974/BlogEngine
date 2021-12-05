@@ -3,10 +3,10 @@ package diplom.blogengine.config;
 import diplom.blogengine.repository.PasswordTokenRepository;
 import diplom.blogengine.repository.PostsCounterStorage;
 import diplom.blogengine.service.ICaptchaService;
-import diplom.blogengine.service.util.schedule.DeleteExpiryResetPassswordTokensTask;
-import diplom.blogengine.service.util.schedule.DeleteExpiryCaptchaTask;
-import diplom.blogengine.service.util.schedule.ScheduledTasksHandler;
-import diplom.blogengine.service.util.schedule.UpdateCountersToBackTask;
+import diplom.blogengine.service.schedule.DeleteExpiryResetPassswordTokensTask;
+import diplom.blogengine.service.schedule.DeleteExpiryCaptchaTask;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
+import diplom.blogengine.service.schedule.UpdateCountersToBackTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,7 +32,7 @@ public class BlogSchedulerTasksConfig {
         UpdateCountersToBackTask task = new UpdateCountersToBackTask(entityManager, txTemplate, counterStorage);
         int initialDelay = 10;
         int period = 10;
-        tasksHandler.scheduleTask(task, initialDelay, period, TimeUnit.MINUTES);
+        tasksHandler.scheduleTask(task, initialDelay, period, TimeUnit.SECONDS);
     }
 
     @Autowired

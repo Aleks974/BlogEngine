@@ -1,25 +1,32 @@
 package diplom.blogengine.repository;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 
 public class PostsCounterStorage {
+    private static Object lock = new Object();
     private final ConcurrentHashMap<Long, Integer> counters = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<Long> updatedPostIds = new ConcurrentLinkedQueue<>();
-    private final int START_VALUE = 1;
+    private final int ONE = 1;
 
-    public int getOrUpdate(Long postId, int value) {
-        Objects.requireNonNull(value, "getOrUpdate(): vslue is null for postId: " + postId);
+    public int getOrSet(Long postId, int value) {
+        Objects.requireNonNull(value, "getOrSet(): value is null for postId: " + postId);
         return counters.computeIfAbsent(postId, k -> value);
     }
 
-    public int incrementAndGet(Long postId) {
-        int value;
-        //synchronized (postId) {
-            value = counters.merge(postId, START_VALUE, Integer::sum);
-       // }
+    public int incrementAndGet(Long postId, int initialValue) {
+        Integer value;
+        if ((value = counters.get(postId)) == null) {
+            value = initialValue + 1;
+            counters.put(postId, value);
+        } else {
+            value = counters.merge(postId, ONE, Integer::sum);
+        }
+
         updatedPostIds.add(postId);
         return value;
     }
@@ -30,8 +37,19 @@ public class PostsCounterStorage {
         return updated;
     }
 
-    public int get(Long postId) {
+    public Integer get(Long postId) {
         return counters.get(postId);
+    }
+
+    public Integer set(Long postId, Integer value) {
+        counters.put(postId, value);
+        updatedPostIds.add(postId);
+        return value;
+    }
+
+    public void remove(Long postId) {
+        counters.remove(postId);
+        updatedPostIds.remove(postId);
     }
 }
 

@@ -18,17 +18,19 @@ import diplom.blogengine.security.UserDetailsExt;
 import diplom.blogengine.service.util.ContentHelper;
 import diplom.blogengine.service.util.TimestampHelper;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.Hibernate;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
+import javax.persistence.Persistence;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceUtil;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -175,6 +177,7 @@ public class PostService implements IPostService {
             Pageable pageRequest = getPageRequestWithSort(offset, limit, PostSortMode.RECENT);
             List<PostDto> postsDtoList = cachedPostRepository.findPostsByQuery(query, pageRequest);
             long totalPostsCount = cachedPostRepository.getTotalPostsCountByQuery(query);
+            log.debug(postsDtoList.toString());
             response = postsResponseMapper.multiplePostsResponse(convertToResponses(postsDtoList), totalPostsCount);
         }
         return response;
@@ -252,7 +255,7 @@ public class PostService implements IPostService {
         Objects.requireNonNull(postDto, "input postData is null");
 
         long id = postDto.getId();
-        int viewCount = postsCounterStorage.getOrUpdate(id, postDto.getViewCount());
+        int viewCount = postsCounterStorage.getOrSet(id, postDto.getViewCount());
         long timestamp = timestampHelper.toTimestampAtServerZone(Objects.requireNonNull(postDto.getTime()));
         String title = Objects.requireNonNull(postDto.getTitle());
         String announce = Objects.requireNonNull(postDto.getAnnounce());
@@ -297,23 +300,28 @@ public class PostService implements IPostService {
         long id = postDto.getId();
 
         List<CommentDto> comments = commentRepository.findByPostId(id);
-        log.debug("getSinglePostById() comments: {}", comments.toString());
+        log.trace("getSinglePostById() comments: {}", comments.toString());
+
         Set<TagDto> tags = tagRepository.findByPostId(id);
-        log.debug("getSinglePostById() tags: {}", tags.toString());
+        log.trace("getSinglePostById() tags: {}", tags.toString());
 
         if (authUserId == 0 || (!authUserIsModerator && authUserId != postDto.getUserId())) {
-            int viewCount = updatePostViewCount(id);
+            int currentViewCount = postDto.getViewCount();
+            //log.debug(String.valueOf(currentViewCount));
+            int viewCount = updatePostViewCount(id, currentViewCount);
+            //log.debug(String.valueOf(viewCount));
             postDto.setViewCount(viewCount);
         }
         return postsResponseMapper.singlePostResponse(postDto, comments, tags);
     }
 
-    private int updatePostViewCount(long postId) {
+    private int updatePostViewCount(long postId, int initialValue) {
         log.debug("enter updatePostViewCount()");
         //postRepository.updatePostViewCount(postId);
-        return postsCounterStorage.incrementAndGet(postId);
+        return postsCounterStorage.incrementAndGet(postId, initialValue);
     }
 
+    @Transactional
     @Override
     public ResultResponse newPost(PostDataRequest postDataRequest, UserDetailsExt authUser, boolean moderationIsEnabled, Locale locale) {
         log.debug("enter newPost()");
@@ -332,6 +340,12 @@ public class PostService implements IPostService {
         User user = entityManager.getReference(User.class, authUser.getId());
         post.setUser(user);
 
+        PersistenceUtil util = Persistence.getPersistenceUtil();
+        log.trace("newPost() {}", entityManager.isOpen());
+        log.trace("newPost() {}", entityManager.isJoinedToTransaction());
+        log.trace("newPost() {}", entityManager.contains(user));
+        log.trace("newPost() {}", util.isLoaded(user));
+
         ModerationStatus moderationStatus;
         if (!moderationIsEnabled || authUser.isModerator()) {
             moderationStatus = ModerationStatus.ACCEPTED;
@@ -339,15 +353,13 @@ public class PostService implements IPostService {
             moderationStatus = ModerationStatus.NEW;
         }
         post.setModerationStatus(moderationStatus);
-
-        postRepository.save(post);
+        postRepository.saveAndFlush(post);
 
         cachedPostRepository.clearMultiplePostsAndCountsCache();
 
         return resultResponseMapper.success();
     }
 
-    @Modifying
     @Transactional
     @Override
     public ResultResponse updatePost(long id, PostDataRequest postDataRequest, UserDetailsExt authUser,
@@ -358,15 +370,12 @@ public class PostService implements IPostService {
         Objects.requireNonNull(authUser, "authUser is null");
         Objects.requireNonNull(locale, "locale is null");
 
-        // ToDo проверить статус attached или detached
-        // user, Moderator инициализирован?
         Post updatedPost = postRepository.findById(id).orElseThrow(() -> new PostNotFoundException(id));
-        System.out.println(Hibernate.isInitialized(updatedPost.getUser()));
+
         long authorId = updatedPost.getUser().getId();
-        if (!authUser.isModerator() && authUser.getId() != authorId ) {
+        if (authorId != authUser.getId()) {
             throw new PostAccessDeniedException();
         }
-
 
         clearTags(postDataRequest);
         Map<String, String> errors = validatePostData(postDataRequest, locale);
@@ -374,22 +383,19 @@ public class PostService implements IPostService {
             throw new ValidationException(errors);
         }
 
-        Post post = convertDtoToPost(postDataRequest);
-        post.setId(id);
-        post.setUser(updatedPost.getUser());
-        post.setViewCount(updatedPost.getViewCount());
-        User moderator = updatedPost.getModerator();
-        System.out.println(Hibernate.isInitialized(moderator));
-        if (moderator != null) {
-            post.setModerator(updatedPost.getModerator());
-        }
-        if (moderationIsEnabled && !authUser.isModerator()) {
-            post.setModerationStatus(ModerationStatus.NEW);
-        } else {
-            post.setModerationStatus(updatedPost.getModerationStatus());
-        }
+        Post postFromDto = convertDtoToPost(postDataRequest);
 
-        postRepository.save(post);
+        updatedPost.setTime(postFromDto.getTime());
+        updatedPost.setActive(postFromDto.isActive());
+        updatedPost.setTitle(postFromDto.getTitle());
+        updatedPost.setTags(postFromDto.getTags());
+        updatedPost.setText(postFromDto.getText());
+        updatedPost.setAnnounce(postFromDto.getAnnounce());
+
+        if (moderationIsEnabled && !authUser.isModerator()) {
+            updatedPost.setModerationStatus(ModerationStatus.NEW);
+        }
+        postRepository.saveAndFlush(updatedPost);
 
         cachedPostRepository.clearSinglePostCache(id);
         cachedPostRepository.clearMultiplePostsAndCountsCache();
@@ -448,8 +454,8 @@ public class PostService implements IPostService {
 
         Post post = new Post();
 
-        long currentTimestamp =  timestampHelper.genCurrentTimestamp();
         long timestamp = postDataRequest.getTimestamp();
+        long currentTimestamp =  timestampHelper.genCurrentTimestamp();
         if (timestamp < currentTimestamp ) {
             timestamp = currentTimestamp;
         }
@@ -480,6 +486,7 @@ public class PostService implements IPostService {
         return post;
     }
 
+    @Transactional
     @Override
     public ResultResponse newComment(PostCommentDataRequest commentDataRequest, UserDetailsExt authUser, Locale locale) {
         log.debug("enter newComment()");
@@ -506,11 +513,12 @@ public class PostService implements IPostService {
         }
         Post post = entityManager.getReference(Post.class, postId);
         comment.setPost(post);
-
         User user = entityManager.getReference(User.class, authUser.getId());
         comment.setUser(user);
+        comment = commentRepository.saveAndFlush(comment);
 
-        comment = commentRepository.save(comment);
+        cachedPostRepository.clearSinglePostCache(postId);
+        cachedPostRepository.clearMultiplePostsAndCountsCache();
 
         return resultResponseMapper.success(comment.getId());
     }
@@ -541,6 +549,7 @@ public class PostService implements IPostService {
         return comment;
     }
 
+    @Transactional
     @Override
     public ResultResponse newVote(VoteParameter voteParam,
                                   VoteDataRequest voteDataRequest,
@@ -567,11 +576,15 @@ public class PostService implements IPostService {
         }
         postVote.setValue(value);
         postVote.setTime(LocalDateTime.now());
-        postVoteRepository.save(postVote);
+        postVoteRepository.saveAndFlush(postVote);
+
+        cachedPostRepository.clearSinglePostCache(postId);
+        cachedPostRepository.clearMultiplePostsAndCountsCache();
 
         return resultResponseMapper.success();
     }
 
+    @Transactional
     @Override
     public ResultResponse moderatePost(PostModerationRequest postModerationRequest, UserDetailsExt authUser) {
         log.debug("enter moderatePost()");
@@ -590,11 +603,13 @@ public class PostService implements IPostService {
                 postToModerate.setModerationStatus(newStatus);
                 User moderator = entityManager.getReference(User.class, authUser.getId());
                 postToModerate.setModerator(moderator);
-                postRepository.save(postToModerate);
+                postRepository.saveAndFlush(postToModerate);
             }
         } catch (Exception ex) {
             return resultResponseMapper.failure();
         }
+
+        cachedPostRepository.clearMultiplePostsAndCountsCache();
 
         return resultResponseMapper.success();
     }

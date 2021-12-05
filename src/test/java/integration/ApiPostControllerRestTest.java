@@ -1,24 +1,29 @@
 package integration;
 
+import config.H2JpaConfig;
+import diplom.blogengine.Application;
 import diplom.blogengine.api.request.*;
 import diplom.blogengine.api.response.MultiplePostsResponse;
 import diplom.blogengine.api.response.PostResponse;
 import diplom.blogengine.api.response.ResultResponse;
+import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.model.*;
-import diplom.blogengine.repository.CachedSettingsRepository;
-import diplom.blogengine.repository.PostRepository;
-import diplom.blogengine.repository.TagRepository;
+import diplom.blogengine.repository.*;
 import diplom.blogengine.service.ModerationDecision;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.persistence.EntityGraph;
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.UnaryOperator;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,10 +35,16 @@ public class ApiPostControllerRestTest extends ApiControllerRestTest {
     private PostRepository postRepository;
 
     @Autowired
+    private CachedPostRepository cachedPostRepository;
+
+    @Autowired
     private TagRepository tagRepository;
 
     @Autowired
     private CachedSettingsRepository settingsRepository;
+
+    @Autowired
+    PostsCounterStorage counterStorage;
 
     // /api/post/my
     @Test
@@ -794,6 +805,46 @@ public class ApiPostControllerRestTest extends ApiControllerRestTest {
         assertNotNull(post);
         expectedStatus = ModerationStatus.DECLINED;
         assertEquals(expectedStatus, post.getModerationStatus());
+    }
+
+
+    // /api/post
+
+    @Test
+    public void givenAuthorLogin_whenSendGetPostById_thenReturnedViewCountNotChanged() throws Exception {
+        String cookie = getCookieAfterSuccessLogin(user3Email, user3Pass);
+        long postId = 2;
+        int requestCount = 5;
+        int expectedViewCount = 1;
+        cachedPostRepository.clearAllCache();
+        //System.out.println(counterStorage.get(postId));
+
+        // when
+        for(int i = 0; i < requestCount; i++) {
+            ResponseEntity<SinglePostResponse> responseEntity = sendGetPost(postId, cookie);
+            assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        }
+        ResponseEntity<SinglePostResponse> responseEntity = sendGetPost(postId, cookie);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        SinglePostResponse response = responseEntity.getBody();
+        assertNotNull(response);
+
+        // then
+        long actualViewCountFromResponse = response.getViewCount();
+        assertEquals(expectedViewCount, actualViewCountFromResponse);
+
+        Integer actualViewCountFromCache = counterStorage.get(postId);
+        //System.out.println(actualViewCountFromCache);
+        if (actualViewCountFromCache != null) {
+            assertEquals(expectedViewCount, actualViewCountFromCache.intValue());
+        }
+
+        int timeToUpdateCountersFromCacheToDB = 10;
+        TimeUnit.SECONDS.sleep(timeToUpdateCountersFromCacheToDB);
+
+        //System.out.println(counterStorage.get(postId));
+        long actualViewCountFromRepository1 = postRepository.findById(postId).get().getViewCount();
+        assertEquals(expectedViewCount, actualViewCountFromRepository1);
     }
 
 

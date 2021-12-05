@@ -11,6 +11,7 @@ import diplom.blogengine.repository.CachedSettingsRepository;
 import diplom.blogengine.repository.SettingsRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,7 @@ public class OptionsSettingsService implements IOptionsSettingsService {
         return settings.getOrDefault(STATISTICS_IS_PUBLIC_KEY, STATISTICS_IS_PUBLIC_DEFAULT);
     }
 
+    @Transactional
     @Override
     public ResultResponse updateSettings(GlobalSettingsRequest globalSettingsRequest) {
         Objects.requireNonNull(globalSettingsRequest);
@@ -104,7 +106,6 @@ public class OptionsSettingsService implements IOptionsSettingsService {
             String value = code.getValueFromRequest(globalSettingsRequest) ? YES_VALUE : NO_VALUE;
             setting.setValue(value);
         }
-
         settingsRepository.saveAll(settings);
 
         cachedSettingsRepository.clearAllCache();

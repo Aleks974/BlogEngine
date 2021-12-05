@@ -1,9 +1,9 @@
 package integration;
 
+
 import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.repository.PostRepository;
 import diplom.blogengine.repository.PostsCounterStorage;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +15,7 @@ import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@Slf4j
-public class ApiPostControllerMultithreadingTest extends ApiControllerRestTest {
+public class CachedPostRepositoryTest extends ApiControllerRestTest{
 
     @Autowired
     private PostRepository postRepository;
@@ -24,7 +23,7 @@ public class ApiPostControllerMultithreadingTest extends ApiControllerRestTest {
     @Autowired
     PostsCounterStorage counterStorage;
 
-    @Test
+    //@Test
     public void givenResourceUrl_whenSendGetPostByIdParallel_thenReturnedViewCountCorrect() throws Exception {
         final long postId = 3L;
         final int threadCount = 10;
@@ -61,7 +60,4 @@ public class ApiPostControllerMultithreadingTest extends ApiControllerRestTest {
         long actualViewCountFromRepository = postRepository.findById(postId).get().getViewCount();
         assertEquals(expectedViewCount, actualViewCountFromRepository);
     }
-
-
-
 }

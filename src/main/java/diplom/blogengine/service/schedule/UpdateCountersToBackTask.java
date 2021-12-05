@@ -1,12 +1,10 @@
-package diplom.blogengine.service.util.schedule;
+package diplom.blogengine.service.schedule;
 
 import diplom.blogengine.repository.PostsCounterStorage;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.persistence.EntityManager;
-import javax.persistence.EntityTransaction;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -34,21 +32,25 @@ public class UpdateCountersToBackTask implements Runnable {
 
         int successUpdate = 0;
         for (Long postId : updatedIds) {
-            int counterValue = counterStorage.get(postId);
-            try {
-                txTemplate.execute(t -> {
-                    entityManager
-                        .createNativeQuery("UPDATE posts SET view_count = ? WHERE id = ?")
-                        .setParameter(1, counterValue)
-                        .setParameter(2, postId)
-                        .executeUpdate();
-                    t.flush();
-                    return null;
-                });
-                successUpdate++;
-            } catch (Exception ex) {
-                log.error(ex.toString());
-                log.error(Arrays.toString(ex.getStackTrace()));
+            Integer counterValue = counterStorage.get(postId);
+            if (counterValue == null) {
+                log.warn("Counter (postId = {}) value is null", postId);
+            } else {
+                try {
+                    txTemplate.execute(t -> {
+                        entityManager
+                                .createNativeQuery("UPDATE posts SET view_count = ? WHERE id = ?")
+                                .setParameter(1, counterValue)
+                                .setParameter(2, postId)
+                                .executeUpdate();
+                        t.flush();
+                        return null;
+                    });
+                    successUpdate++;
+                } catch (Exception ex) {
+                    log.error(ex.toString());
+                    log.error(Arrays.toString(ex.getStackTrace()));
+                }
             }
 
         }

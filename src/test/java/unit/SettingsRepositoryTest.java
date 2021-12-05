@@ -5,6 +5,8 @@ import diplom.blogengine.Application;
 import diplom.blogengine.model.GlobalSetting;
 import diplom.blogengine.model.SettingsCode;
 import diplom.blogengine.repository.SettingsRepository;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,6 +29,14 @@ public class SettingsRepositoryTest {
 
     @Autowired
     private SettingsRepository settingsRepository;
+
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
 
     @Test
     public void getSetting_WhenSaveAndRetrieveSetting_thenOk() {

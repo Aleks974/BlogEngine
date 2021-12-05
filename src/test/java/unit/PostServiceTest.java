@@ -5,8 +5,12 @@ import diplom.blogengine.Application;
 import diplom.blogengine.api.response.SinglePostResponse;
 import diplom.blogengine.exception.PostNotFoundException;
 import diplom.blogengine.model.Post;
+import diplom.blogengine.model.dto.PostDto;
+import diplom.blogengine.model.dto.PostDtoExt;
 import diplom.blogengine.repository.PostRepository;
 import diplom.blogengine.service.IPostService;
+import diplom.blogengine.service.schedule.ScheduledTasksHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +42,14 @@ public class PostServiceTest {
 
     private TestDataGenerator testDataGenerator = new TestDataGenerator();
 
+    @Autowired
+    private ScheduledTasksHandler scheduler;
+
+    @BeforeEach
+    public void setUp() {
+        scheduler.shutdown();
+    }
+
     @Test
     public void givenPostService_whenStart_thenNotNull() {
         assertNotNull(postService);
@@ -45,37 +57,34 @@ public class PostServiceTest {
     }
 
     @Test
-    // ToDo
-    public void givenMockPostData_whenGetSinglePost_thenResponseReturned() {
-       /* final long TEST_POST_ID = 1;
-        final long TEST_LIKE_COUNT = 23;
-        final long TEST_DISLIKE_COUNT = 4;
-        Post testPost = testDataGenerator.generatePost();
-        final long AUTH_USER_ID = 0;
-        final boolean IS_MODERATOR = false;
-        Object[] mockPostData = {testPost, null, TEST_LIKE_COUNT, TEST_DISLIKE_COUNT};
+    public void givenMockPostDtoExt_whenGetSinglePost_thenCorrectResponseReturned() {
+        PostDtoExt testPost = testDataGenerator.generatePostDtoExt();
 
-        Mockito.when(postRepository.findPostById(TEST_POST_ID, AUTH_USER_ID, IS_MODERATOR)).thenReturn(Collections.singletonList(mockPostData));
+        long testPostId = 1;
+        long authUserId = 0;
+        boolean isModerator = false;
+        Mockito.when(postRepository.findPostById(testPostId, authUserId, isModerator)).thenReturn(testPost);
 
-        SinglePostResponse response = postService.getPostDataById(TEST_POST_ID, null);
+        SinglePostResponse response = postService.getPostDataById(testPostId, null);
 
         assertNotNull(response);
         assertEquals(testPost.getId(), response.getId());
         assertEquals(testPost.getTitle(), response.getTitle());
-        assertEquals(response.getLikeCount(), TEST_LIKE_COUNT);
-        assertEquals(response.getDislikeCount(), TEST_DISLIKE_COUNT);*/
+        assertEquals(response.getLikeCount(), response.getLikeCount());
+        assertEquals(response.getDislikeCount(), response.getDislikeCount());
+        assertEquals(response.getViewCount(), response.getViewCount());
+        assertEquals(response.getText(), response.getText());
     }
 
 
     @Test
     public void givenMockNullPostData_whenGetSinglePost_thenExceptionPostNotFoundRaised() {
-        final long TEST_POST_ID = 1;
-        final long AUTH_USER_ID = 0;
-        final boolean IS_MODERATOR = false;
+        long testPostId = 2;
+        long authUserId = 0;
+        boolean isModerator = false;
+        Mockito.when(postRepository.findPostById(testPostId, authUserId, isModerator)).thenReturn(null);
 
-        Mockito.when(postRepository.findPostById(TEST_POST_ID, AUTH_USER_ID, IS_MODERATOR)).thenReturn(null);
-
-        Exception exception = assertThrows(PostNotFoundException.class, () -> postService.getPostDataById(TEST_POST_ID, null));
+        Exception exception = assertThrows(PostNotFoundException.class, () -> postService.getPostDataById(testPostId, null));
 
         assertNotNull(exception);
 

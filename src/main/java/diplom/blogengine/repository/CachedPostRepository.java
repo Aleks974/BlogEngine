@@ -76,6 +76,8 @@ public class CachedPostRepository {
     }
 
     public List<PostDto> findPostsByQuery(String query, Pageable pageRequest) {
+        log.debug("enter findPostsByQuery() query: {}", query);
+
         final StoreKey key = createKey("postsByQuery_" + query, pageRequest);
         //log.debug(key.toString());
         return cacheStorePostsData.computeIfAbsent(key, k -> postRepository.findPostsByQuery(query, pageRequest));

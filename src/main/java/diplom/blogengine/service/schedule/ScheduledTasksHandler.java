@@ -1,4 +1,4 @@
-package diplom.blogengine.service.util.schedule;
+package diplom.blogengine.service.schedule;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -13,6 +13,10 @@ public class ScheduledTasksHandler {
 
     public void scheduleTask(Runnable runnable, int initialDelay, int delay, TimeUnit unit) {
         scheduler.scheduleWithFixedDelay(runnable, initialDelay, delay, unit);
+    }
+
+    public void shutdown() {
+        scheduler.shutdown();
     }
 
 /*    class BeeperControl {
