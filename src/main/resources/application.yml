@@ -35,8 +35,8 @@ spring.servlet.multipart.max-request-size: ${blog.maxUploadSize}
 # Spring Boot Mail config
 spring.mail.host: smtp.gmail.com
 spring.mail.port: 587
-spring.mail.username: enter email send from
-spring.mail.password: enter password
+spring.mail.username: your login to Gmail
+spring.mail.password: app password for Gmail
 spring.mail.properties.mail.smtp.auth: true
 spring.mail.properties.mail.smtp.starttls.enable: true
 
@@ -51,16 +51,6 @@ blog:
   copyrightFrom: 2021
   serverTimeZone: Europe/Moscow
   captchaDeleteTimeout: 3600
-  permittedTags: h1|h2|h3|h4|h5|h6|bold|strong|u|p|div|span|font|code
+  permittedTags: h1|h2|h3|h4|h5|h6|bold|strong|u|p|div|span|font|code|img
   uploadDir: upload # загружаем в папку откуда запущено приложение
   maxUploadSize: 5MB
-
-    #logging:
-    #level:
-    #root: "info"
-    #org.springframework: "info"
-    #org.springframework.web: "info"
-    #org.hibernate: "info"
-    #org.hibernate.SQL=DEBUG
-    #org.hibernate.type.descriptor.sql.BasicBinder=TRACE
-    #o.h.e.j.s.SqlStatementLogger

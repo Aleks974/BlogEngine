@@ -169,8 +169,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Object[]> findPostsCountPerDateByYear(@Param("year" ) Integer year);
 
     @Query(JPQL_SELECT_SINGLE_POST_DATA +
-            "WHERE p.id = :id AND (:authUserIsModerator = TRUE OR :authUserId = u.id OR " +
-            "(p.isActive = 1 AND p.moderationStatus = 'ACCEPTED' AND p.time <= NOW())) " +
+            "WHERE p.id = :id AND (:authUserIsModerator = TRUE OR :authUserId = u.id OR (p.isActive = 1 AND p.moderationStatus = 'ACCEPTED' AND p.time <= NOW())) " +
             "GROUP BY p.id")
     PostDtoExt findPostById(@Param("id") long id, @Param("authUserId") long authUserId, @Param("authUserIsModerator") boolean authUserIsModerator);
 

@@ -30,10 +30,8 @@ public class CachedTagRepository {
     public List<TagCountDto> findAllTagsCounts() {
         final String key = "all";
         return cacheStoreTags.computeIfAbsent(key, k -> {
-            List<TagCountDto> tags = null;
-            synchronized (lock1) {
-                tags = tagRepository.findAllTagsCounts();
-            }
+            log.trace("findAllTagsCounts() get all from db");
+            List<TagCountDto> tags = tagRepository.findAllTagsCounts();
             return tags;
         });
     }
@@ -58,5 +56,10 @@ public class CachedTagRepository {
             return  tag;
         });
     }
+
+    public Tag save(Tag t) {
+        return tagRepository.save(t);
+    }
+
 
 }

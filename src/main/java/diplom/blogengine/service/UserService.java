@@ -220,7 +220,9 @@ public class UserService implements IUserService {
         log.debug("enter validateUserRegisterData()");
 
         Map<String, String> errors = new HashMap<>();
-        validateCaptcha(userData.getCaptcha(), userData.getCaptchaSecret(), errors, locale);
+        if (!validateCaptcha(userData.getCaptcha(), userData.getCaptchaSecret(), errors, locale)) {
+            return errors;
+        }
         validateEmail(userData.getEmail(), errors, locale);
         validateName(userData.getName(), errors, locale);
         validatePassword(userData.getPassword(), errors, locale);

@@ -103,7 +103,7 @@ public class TagsService implements ITagsService {
     public Tag getOrSaveNewTag(String name) {
         Tag tag = cachedTagRepository.findByName(name);
         if (tag == null) {
-            tag = tagRepository.save(new Tag(name));
+            tag = cachedTagRepository.save(new Tag(name));
             cachedTagRepository.clearAllCache();
         }
         return tag;

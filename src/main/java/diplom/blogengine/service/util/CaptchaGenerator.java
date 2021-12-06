@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CaptchaGenerator {
     private final Base64.Encoder encoder = Base64.getEncoder();
@@ -15,6 +16,7 @@ public class CaptchaGenerator {
     private final int CAPTCHA_WEIGHT = 100;
     private final int CAPTCHA_HEIGHT = 35;
     private final String IMG_FORMAT = "jpg";
+    private final char[] CAPTCHA_LETTERS = "abcdefghijkmnopqrstuvwxyz".toCharArray();
 
     public byte[] genCaptchaBytes(String text) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -31,8 +33,15 @@ public class CaptchaGenerator {
         return encoder.encodeToString(genCaptchaBytes(text));
     }
 
-    public String genRandomString() {
-        return captchaGen.getTokenGenerator().next();
+    public String genRandomString(int length) {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        char[] codeArr = new char[length];
+        for (int i = 0; i < codeArr.length; i++) {
+            int ind = random.nextInt(CAPTCHA_LETTERS.length);
+            codeArr[i] = CAPTCHA_LETTERS[ind];
+        }
+        return String.valueOf(codeArr);
+        //return captchaGen.getTokenGenerator().next();
     }
 
     private BufferedImage resizeImg(BufferedImage source) {

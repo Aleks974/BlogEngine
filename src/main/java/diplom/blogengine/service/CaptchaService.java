@@ -8,19 +8,22 @@ import diplom.blogengine.repository.CaptchaCodeRepository;
 import diplom.blogengine.service.util.CaptchaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.rmi.server.UID;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 @Service
 public class CaptchaService implements ICaptchaService {
     private final String IMAGE_CONTENT_TYPE = "data:image/png;base64";
+    private final int CAPTCHA_CODE_LENGTH = 3;
+
     private final CaptchaCodeRepository captchaCodeRepository;
     private final CaptchaGenerator captchaGenerator;
     private final AuthResponsesMapper responsesMapper;
-
     public CaptchaService(CaptchaCodeRepository captchaCodeRepository,
                           CaptchaGenerator captchaGenerator,
                           AuthResponsesMapper responsesMapper) {
@@ -31,9 +34,9 @@ public class CaptchaService implements ICaptchaService {
 
     @Override
     public CaptchaResponse generateCaptchaData() {
-        log.debug("enter generateCaptchaDataAndDeleteOld()");
+        log.debug("enter generateCaptchaData()");
 
-        String code = captchaGenerator.genRandomString();
+        String code = captchaGenerator.genRandomString(CAPTCHA_CODE_LENGTH);
         String encodedCaptchaString = generateCaptchaString(code);
         String secretCode = UUID.randomUUID().toString();
 

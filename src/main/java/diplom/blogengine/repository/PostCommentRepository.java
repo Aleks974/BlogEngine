@@ -26,7 +26,7 @@ public interface PostCommentRepository extends JpaRepository<PostComment, Long> 
             "JOIN pc.user u " +
             "JOIN pc.post p " +
             "WHERE p.id = :postId " +
-            "ORDER BY pc.time DESC")
+            "ORDER BY pc.time ASC")
     List<CommentDto> findByPostId(@Param("postId") long postId);
 }
 

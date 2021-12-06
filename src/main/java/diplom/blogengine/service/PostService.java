@@ -45,6 +45,7 @@ import java.util.stream.Stream;
 public class PostService implements IPostService {
     private final PostRepository postRepository;
     private final CachedPostRepository cachedPostRepository;
+    private final CachedTagRepository cachedTagRepository;
     private final PostsCounterStorage postsCounterStorage;
     private final TagRepository tagRepository;
     private final PostCommentRepository commentRepository;
@@ -74,6 +75,7 @@ public class PostService implements IPostService {
 
     public PostService(PostRepository postRepository,
                        CachedPostRepository cachedPostRepository,
+                       CachedTagRepository cachedTagRepository,
                        PostCommentRepository commentRepository,
                        TagRepository tagRepository,
                        ITagsService tagsService,
@@ -86,6 +88,7 @@ public class PostService implements IPostService {
                        MessageSource messageSource) {
         this.postRepository = postRepository;
         this.cachedPostRepository = cachedPostRepository;
+        this.cachedTagRepository = cachedTagRepository;
         this.postsCounterStorage = postsCounterStorage;
         this.commentRepository = commentRepository;
         this.tagRepository = tagRepository;
@@ -564,17 +567,17 @@ public class PostService implements IPostService {
         long postId = voteDataRequest.getPostId();
         postRepository.findPostId(postId).orElseThrow(() ->  new InputParameterException("post.notFound", "postId", postId));
 
-        int value = voteParam.getValue();
+        int newValue = voteParam.getValue();
         long authUserId = authUser.getId();
         PostVote postVote = postVoteRepository.findByPostAndUserIds(postId, authUserId);
         if (postVote == null) {
             postVote = new PostVote();
             postVote.setUser(entityManager.getReference(User.class, authUserId));
             postVote.setPost(entityManager.getReference(Post.class, postId));
-        } else if (postVote.getValue() == value) {
+        } else if (postVote.getValue() == newValue) {
             return resultResponseMapper.failure();
         }
-        postVote.setValue(value);
+        postVote.setValue(newValue);
         postVote.setTime(LocalDateTime.now());
         postVoteRepository.saveAndFlush(postVote);
 
@@ -610,6 +613,7 @@ public class PostService implements IPostService {
         }
 
         cachedPostRepository.clearMultiplePostsAndCountsCache();
+        cachedTagRepository.clearAllCache();
 
         return resultResponseMapper.success();
     }
