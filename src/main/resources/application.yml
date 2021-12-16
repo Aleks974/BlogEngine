@@ -3,7 +3,7 @@ server.port: ${PORT:8080}
 
 # Spring Boot persistence config
 spring.datasource.driver-class-name: com.mysql.cj.jdbc.Driver
-spring.datasource.url: jdbc:${JAWSDB_URL:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8}
+spring.datasource.url: jdbc:${DB_URL:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8}
 spring.datasource.username: blog
 spring.datasource.password: RbM8u$slkomV5
 spring.jpa.hibernate.ddl-auto: validate
@@ -19,6 +19,7 @@ logging.level.org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 # Spring Boot DB Migration control via Flywqy
 spring.flyway.enabled: true
+logging.level.spring.flyway: trace
 
 # Spring Boot upload files config
 #spring.web.resources.static-locations: classpath:\static\,classpath:\upload\

@@ -38,7 +38,7 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
     @Test
     public void givenNotAuth_whenSendPostImage_then401Unauthorized() throws Exception  {
         String notAuth = "";
-        String extension = ".jpg";
+        String extension = "jpg";
         int fileSize = 1024 * 1024;
         Path tmpFile = testDataGenerator.createTempFile(extension, fileSize);
 
@@ -52,7 +52,7 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
     @Test
     public void givenUserLoginAndFileWithWrongSize_whenSendPostImage_then400BadRequest() throws Exception  {
         String cookie = getCookieAfterSuccessLogin(user3Email, user3Pass);
-        String extension = ".jpg";
+        String extension = "jpg";
         int fileSize = 6 * 1024 * 1024;
         Path tmpFile = testDataGenerator.createTempFile(extension, fileSize);
 
@@ -69,10 +69,10 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
     @Test
     public void givenUserLoginAndFileWithWrongExt_whenSendPostImage_then400BadRequest() throws Exception  {
         String cookie = getCookieAfterSuccessLogin(user3Email, user3Pass);
-        String extension = ".pdf";
+        String extension = "pdf";
         int fileSize = 1024 * 1024;
         Path tmpFile = testDataGenerator.createTempFile(extension, fileSize);
-
+        System.out.println(tmpFile);
         ResponseEntity<String> responseEntity = sendPostFile(tmpFile, cookie);
         assertNotNull(responseEntity);
         assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
