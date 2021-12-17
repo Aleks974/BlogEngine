@@ -43,7 +43,7 @@ spring.mail.properties.mail.smtp.starttls.enable: true
 # blog settings
 blog:
   title: JStory
-  siteUrl: http://localhost:${server.port}
+  siteUrl: ${APP_URL:http://localhost:${server.port}}
   subtitle: Блог о программировании на Java
   phone: +7 123 123-45-67
   email: support@blogengine.com

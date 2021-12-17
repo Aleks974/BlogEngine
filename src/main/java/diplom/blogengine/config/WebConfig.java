@@ -33,6 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     public WebConfig(BlogSettings blogSettings) {
         this.blogSettings = blogSettings;
+        log.debug("app url: {}", blogSettings.getSiteUrl());
     }
 
     @Autowired
