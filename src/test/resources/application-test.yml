@@ -1,3 +1,4 @@
 spring.flyway.enabled: false
+logging.config: classpath:log4j2-spring-test.xml # конфигурация log4j2 для тестов
 blog:
   uploadDir: upload_tmp # загружаем в папку откуда запущено приложение (для тестов)

@@ -41,11 +41,7 @@ public class FileStorageService implements IFileStorageService {
 
     @PostConstruct
     public void init() {
-        try {
-            Files.createDirectories(uploadDirRoot);
-        } catch (IOException ex) {
-            throw new FileStorageException("error.file.ioInitFailure", ex);
-        }
+        createDirs(uploadDirRoot);
     }
 
     @Override
@@ -190,7 +186,12 @@ public class FileStorageService implements IFileStorageService {
     private void createDirs(Path path) {
         try {
             if (!Files.exists(path)) {
-                Files.createDirectories(path);
+                Path created;
+                if ((created = Files.createDirectories(path)) != null) {
+                    log.debug("createDirs(): success creating {}", created.toAbsolutePath().toString());
+                } else {
+                    log.debug("createDirs(): fail creating {}", path.toAbsolutePath().toString());
+                }
             }
         } catch (IOException ex) {
             throw new FileStorageException("error.file.ioFailure", ex);

@@ -6,15 +6,20 @@ import diplom.blogengine.service.ModerationDecision;
 import diplom.blogengine.service.converter.*;
 import diplom.blogengine.service.util.ModerationDecisionDeserializer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.server.ErrorPage;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.FormatterRegistry;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.io.File;
@@ -85,6 +90,19 @@ public class WebConfig implements WebMvcConfigurer {
         return  "file:/".concat(absolutePath);
     }
 
+    @Bean
+    public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> containerCustomizer() {
+        return container -> {
+            container.addErrorPages(new ErrorPage(HttpStatus.NOT_FOUND,
+                    "/404"));
+        };
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // или можно через обычный контроллер с аннотацией @GetMapping("/404")
+        registry.addViewController("/404").setViewName("index");
+    }
 
     /*@Bean
     public HttpMessageConverter<Object> createJsonHttpMessageConverter() {
