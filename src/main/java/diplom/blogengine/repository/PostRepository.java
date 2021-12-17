@@ -60,8 +60,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     static final String HAVING_VOTES_LIKE = " HAVING col_4_0_ > 0 OR (col_4_0_ = 0 AND col_5_0_ = 0) ";
     //static final String HAVING_VOTES_LIKE = " HAVING like_count > 0 OR (like_count = 0 AND dislike_count = 0) ";
 
-    static final String ORDER_BY_LIKE_COUNT = " ORDER BY like_count DESC ";
-    static final String ORDER_BY_COMMENT_COUNT = " ORDER BY comment_count DESC ";
+    static final String ORDER_BY_LIKE_COUNT = " ORDER BY like_count DESC, p.time DESC ";
+    static final String ORDER_BY_COMMENT_COUNT = " ORDER BY comment_count DESC, p.time DESC ";
     static final String ORDER_BY_TIME = " ORDER BY p.time DESC ";
 
 
