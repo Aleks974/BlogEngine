@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import diplom.blogengine.service.ModerationDecision;
 import diplom.blogengine.service.converter.*;
 import diplom.blogengine.service.util.ModerationDecisionDeserializer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.server.ErrorPage;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
@@ -25,6 +26,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.io.File;
 import java.nio.file.Path;
 
+@Slf4j
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
     private final BlogSettings blogSettings;
@@ -71,9 +73,11 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     private void exposeDirectory(String dirName, ResourceHandlerRegistry registry) {
+        String resourcePattern = getResourcePattern(dirName);
         String absolutePath = Path.of(dirName).toAbsolutePath().toString();
-        registry.addResourceHandler(getResourcePattern(dirName))
-                .addResourceLocations(getResourceLocation(absolutePath));
+        String resourceLocation = getResourceLocation(absolutePath);
+        log.debug("upload resourcePattern: {}, resourceLocation: {}", resourcePattern, resourceLocation);
+        registry.addResourceHandler(resourcePattern).addResourceLocations(resourceLocation);
     }
 
     private String getResourcePattern(String dirName) {
@@ -84,11 +88,27 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     private String getResourceLocation(String absolutePath) {
-        if (!absolutePath.endsWith("/")) {
-            absolutePath = absolutePath.concat(File.separator);
+        String pathSeparator = File.separator;
+        if (!absolutePath.endsWith(pathSeparator)) {
+            absolutePath = absolutePath.concat(pathSeparator);
         }
-        return  "file:/".concat(absolutePath);
+        String prefix;
+        if (osIsWindows()) {
+            prefix = "file:///";
+        } else {
+            if (!absolutePath.startsWith(pathSeparator)) {
+                absolutePath = pathSeparator.concat(absolutePath);
+            }
+            prefix = "file:";
+        }
+        return  prefix.concat(absolutePath);
     }
+
+    private boolean osIsWindows() {
+        String os = System.getenv("OS");
+        return os != null && os.toLowerCase().contains("windows");
+    }
+
 
     @Bean
     public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> containerCustomizer() {

@@ -25,6 +25,9 @@ hs_err_pid*
 /.idea/
 .gitignore
 
-target/
-logs/
+/target/
+/logs/
+/logstests/
+/upload/
+/upload_tmp/
 *.iml
