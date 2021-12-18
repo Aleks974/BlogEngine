@@ -35,7 +35,11 @@ public class GeneralService implements IGeneralService {
         log.debug("enter getMyStatistics()");
 
         StatPostsDto statPosts = postRepository.getMyPostsStatistics(authUserId);
+        log.debug("StatPostsDto: {}", statPosts.toString());
+
         StatVotesDto statVotes = postVoteRepository.getMyVotesStatistics(authUserId);
+        log.debug("StatVotesDto: {}", statVotes.toString());
+
         return getStatisticsData(statPosts, statVotes);
     }
 
@@ -56,7 +60,8 @@ public class GeneralService implements IGeneralService {
 
         long postsCount = statPosts.getPostsCount();
         long viewsCount = statPosts.getViewsCount();
-        long firstPublication = timestampHelper.toTimestampAtServerZone(statPosts.getFirstPublication());
+        long firstPublication = statPosts.getFirstPublication() != null ?
+                timestampHelper.toTimestampAtServerZone(statPosts.getFirstPublication()) : 0;
         long likesCount = statVotes.getLikesCount();
         long dislikesCount = statVotes.getDislikesCount();
 

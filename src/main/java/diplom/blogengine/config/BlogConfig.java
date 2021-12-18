@@ -2,28 +2,36 @@ package diplom.blogengine.config;
 
 import diplom.blogengine.repository.*;
 import diplom.blogengine.service.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.MailSender;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.TimeZone;
 
+@Slf4j
 @Configuration
 public class BlogConfig {
     
     @Bean
     public BlogSettings blogSettings(BlogProperties blogProp) {
         TimeZone timeZone = TimeZone.getTimeZone(Objects.requireNonNull(blogProp.getServerTimeZone()));
-        int timeout = blogProp.getCaptchaDeleteTimeout();
-        if (timeout <= 0) {
+        setDefaultServerTimeZone(timeZone);
+
+        int captchaDeleteTimeout = blogProp.getCaptchaDeleteTimeout();
+        if (captchaDeleteTimeout <= 0) {
             throw new IllegalArgumentException("Config parameter captchaDeleteTimeout <= 0");
         }
+
         String uploadDir = Objects.requireNonNull(blogProp.getUploadDir());
         if  (uploadDir.contains("..")) {
             throw new IllegalArgumentException("Config parameter uploadDir contains '..'");
         }
+        log.debug("app url: {}", blogProp.getSiteUrl());
+
         return BlogSettings.builder()
                 .title(Objects.requireNonNull(blogProp.getTitle()))
                 .siteUrl(Objects.requireNonNull(blogProp.getSiteUrl()))
@@ -33,11 +41,22 @@ public class BlogConfig {
                 .copyright(Objects.requireNonNull(blogProp.getCopyright()))
                 .copyrightFrom(Objects.requireNonNull(blogProp.getCopyrightFrom()))
                 .serverTimeZone(timeZone)
-                .captchaDeleteTimeout(timeout)
+                .captchaDeleteTimeout(captchaDeleteTimeout)
                 .permittedTags(Objects.requireNonNull(blogProp.getPermittedTags()))
                 .uploadDir(Objects.requireNonNull(blogProp.getUploadDir()))
                 .maxUploadSize(Objects.requireNonNull(blogProp.getMaxUploadSize()))
                 .build();
+    }
+
+    private void setDefaultServerTimeZone(TimeZone timeZoneFromSettings) {
+        TimeZone serverDefaultTimeZone = TimeZone.getDefault();
+        log.debug("time with default timeZone: {} at {}", LocalDateTime.now(), serverDefaultTimeZone.toZoneId());
+
+        TimeZone.setDefault(timeZoneFromSettings);
+        log.debug("time after set timeZone from settings: {} at {}", LocalDateTime.now(), timeZoneFromSettings.toZoneId());
+//        for (String s: TimeZone.getAvailableIDs()) {
+//            System.out.println(s);
+//        }
     }
 
 

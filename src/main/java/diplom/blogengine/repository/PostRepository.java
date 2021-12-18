@@ -24,7 +24,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                                   "FROM Post p ";
     static final String SELECT_COUNT_POSTS = "SELECT COUNT(distinct p.id) " +
                                              "FROM posts p ";
-    //static final String JPQL_SELECT_POSTS_DATA = "SELECT p, u, COUNT(DISTINCT CASE WHEN (v.value = 1) THEN v.id ELSE NULL END) AS like_count, COUNT(DISTINCT CASE WHEN (v.value = -1) THEN v.id ELSE NULL END) AS dislike_count,  COUNT(DISTINCT c.id) AS comment_count " +
     static final String JPQL_SELECT_POSTS_DATA = "SELECT new diplom.blogengine.model.dto.PostDto(p.id, p.time, p.title, p.announce, COUNT(DISTINCT CASE WHEN (v.value = 1) THEN v.id ELSE NULL END) AS like_count, COUNT(DISTINCT CASE WHEN (v.value = -1) THEN v.id ELSE NULL END) AS dislike_count,  COUNT(DISTINCT c.id) AS comment_count, p.viewCount, u.id, u.name) " +
                                                  "FROM Post p " +
                                                  "JOIN p.user u " +
@@ -218,7 +217,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query(JPQL_SELECT_STATISTICS_DATA +
            JPQL_WHERE_GENERAL +
-           " AND u.id = :authUserId")
+           " AND u.id = :authUserId ")
     StatPostsDto getMyPostsStatistics(@Param("authUserId") long authUserId);
 
 

@@ -3,12 +3,14 @@ server.port: ${PORT:8080}
 
 # Spring Boot persistence config
 spring.datasource.driver-class-name: com.mysql.cj.jdbc.Driver
-spring.datasource.url: jdbc:${DB_URL:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8}
+spring.datasource.url: jdbc:${DB_URL:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8&serverTimezone=${blog.serverTimeZone}&useLegacyDatetimeCode=false}
 spring.datasource.username: blog
 spring.datasource.password: RbM8u$slkomV5
 spring.jpa.hibernate.ddl-auto: validate
-spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
-#OSiV is disabled
+spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL8Dialect # spring.jpa.database-platform=org.hibernate.dialect.MySQL8Dialect
+spring.jpa.properties.hibernate.jdbc.time_zone: ${blog.serverTimeZone}
+
+#OSiV is disabled to avoid perfomance issues
 spring.jpa.open-in-view: false
 
 # show SQL
@@ -49,7 +51,7 @@ blog:
   email: support@blogengine.com
   copyright: Александр Иванов
   copyrightFrom: 2021
-  serverTimeZone: Europe/Moscow
+  serverTimeZone: America/Los_Angeles #Europe/Moscow
   captchaDeleteTimeout: 3600
   permittedTags: h1|h2|h3|h4|h5|h6|bold|strong|u|p|div|span|font|code|img
   uploadDir: upload # загружаем в папку откуда запущено приложение

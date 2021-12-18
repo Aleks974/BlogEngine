@@ -18,7 +18,9 @@ import diplom.blogengine.security.UserDetailsExt;
 import diplom.blogengine.service.util.ContentHelper;
 import diplom.blogengine.service.util.TimestampHelper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
+import org.springframework.core.env.Environment;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Persistence;
 import javax.persistence.PersistenceContext;
@@ -56,6 +59,9 @@ public class PostService implements IPostService {
     private final TimestampHelper timestampHelper;
     private final ContentHelper contentHelper;
     private final MessageSource messageSource;
+
+    @Autowired
+    private Environment env;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -100,6 +106,15 @@ public class PostService implements IPostService {
         this.resultResponseMapper = resultResponseMapper;
         this.messageSource = messageSource;
     }
+
+    @PostConstruct
+    public void doSelectNowQuery() {
+        String mysqlTimeZone = env.getProperty("spring.jpa.properties.hibernate.jdbc.time_zone");
+        log.debug("mysqlTimeZone: {}", mysqlTimeZone);
+        Date time = (Date) entityManager.createNativeQuery("SELECT NOW()").getSingleResult();
+        log.debug("now from mysql: {}", time);
+    }
+
 
     @Override
     public MultiplePostsResponse getPostsData(int offset, int limit, PostSortMode mode) {
