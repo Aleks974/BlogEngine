@@ -51,7 +51,7 @@ blog:
   email: support@blogengine.com
   copyright: Александр Иванов
   copyrightFrom: 2021
-  serverTimeZone: America/Los_Angeles #Europe/Moscow
+  serverTimeZone: ${SERVER_APP_AND_DB_TIMEZONE:Europe/Moscow}
   captchaDeleteTimeout: 3600
   permittedTags: h1|h2|h3|h4|h5|h6|bold|strong|u|p|div|span|font|code|img
   uploadDir: upload # загружаем в папку откуда запущено приложение
