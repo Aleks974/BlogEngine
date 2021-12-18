@@ -7,7 +7,8 @@ public class ContentHelper {
     private final Pattern ALL_TAGS_PATTERN = Pattern.compile("(?i)</?[a-z0-9]+.*?/?>");
     private final Pattern PAIRED_TAGS_PATTERN = Pattern.compile("(?i)<(script|object|head).*?((</\\1>)|(/>))"); // использование захватываемых групп \\1
     private final Pattern ALL_TAGS_EXCEPT_PERMITTED_PATTERN;
-    private final Pattern EXTRA_SPACES = Pattern.compile("\\s{2,}");
+    private final Pattern EXTRA_SPACES = Pattern.compile("(\\s|&nbsp;){2,}");
+    private final Pattern NBSP = Pattern.compile("&nbsp+");
     private final String EMPTY_STR = "";
     private final String ONE_SPACE = " ";
 
@@ -37,7 +38,8 @@ public class ContentHelper {
         return PAIRED_TAGS_PATTERN.matcher(content).replaceAll(EMPTY_STR);
     }
 
-    public String clearExtraSpaces(String content) {
-        return EXTRA_SPACES.matcher(content).replaceAll(ONE_SPACE);
+    public String replaceSpacesAndNbspWithOneSpace(String content) {
+        String replacedSpaces = EXTRA_SPACES.matcher(content).replaceAll(ONE_SPACE);
+        return NBSP.matcher(replacedSpaces).replaceAll(ONE_SPACE);
     }
 }

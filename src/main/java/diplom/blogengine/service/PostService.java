@@ -24,8 +24,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -423,14 +421,14 @@ public class PostService implements IPostService {
 
     private void clearTags(PostDataRequest postDataRequest) {
         String title = contentHelper.clearAllTags(postDataRequest.getTitle());
-        postDataRequest.setTitle(contentHelper.clearExtraSpaces(title));
+        postDataRequest.setTitle(contentHelper.replaceSpacesAndNbspWithOneSpace(title));
         String text = contentHelper.clearAllTagsExceptPermitted(postDataRequest.getText());
-        postDataRequest.setText(contentHelper.clearExtraSpaces(text));
+        postDataRequest.setText(contentHelper.replaceSpacesAndNbspWithOneSpace(text));
     }
 
     private void clearTags(PostCommentDataRequest commentDataRequest) {
         String text = contentHelper.clearAllTagsExceptPermitted(commentDataRequest.getText());
-        commentDataRequest.setText(contentHelper.clearExtraSpaces(text));
+        commentDataRequest.setText(contentHelper.replaceSpacesAndNbspWithOneSpace(text));
     }
 
     private Map<String, String> validatePostData(PostDataRequest postDataRequest, Locale locale) {
@@ -498,7 +496,7 @@ public class PostService implements IPostService {
         String clearedText = contentHelper.clearAllTags(post.getText());
         String announce = clearedText.length() > POST_ANNOUNCE_LENGTH ?
                 clearedText.substring(0, POST_ANNOUNCE_LENGTH).concat(ANNOUNCE_MORE) : clearedText;
-        announce = contentHelper.clearExtraSpaces(announce);
+        announce = contentHelper.replaceSpacesAndNbspWithOneSpace(announce);
         post.setAnnounce(announce);
 
         return post;
