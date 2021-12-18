@@ -200,6 +200,8 @@ public class UserService implements IUserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.saveAndFlush(user);
 
+        passwordTokenRepository.delete(passwordResetToken);
+
         return responsesMapper.success();
     }
 
