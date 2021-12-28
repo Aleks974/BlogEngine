@@ -52,11 +52,11 @@
     <Loggers>
         <!-- LOG everything at INFO level -->
         <Root level="info">
-            <AppenderRef ref="console" level="debug" />
-            <AppenderRef ref="rollingfile" level="debug" />
+            <AppenderRef ref="console" />
+            <AppenderRef ref="rollingfile" />
             <AppenderRef ref="errors" level="warn" />
         </Root>
-        <logger name="org.hibernate" level="info" additivity="false">
+        <!--<logger name="org.hibernate" level="info" additivity="false">
             <appender-ref ref="console" />
             <appender-ref ref="rollingfile" />
             <AppenderRef ref="errors" level="warn" />
@@ -69,10 +69,11 @@
         <logger name="org.flywaydb" level="info" additivity="false">
             <appender-ref ref="console" />
             <appender-ref ref="migration" />
-        </logger>
+        </logger>-->
         <logger name="diplom.blogengine" level="trace" additivity="false">
             <appender-ref ref="console" />
             <appender-ref ref="rollingfile" />
+            <AppenderRef ref="errors" level="warn" />
         </logger>
     </Loggers>
 

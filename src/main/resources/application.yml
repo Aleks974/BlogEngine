@@ -1,4 +1,4 @@
-debug: false
+#debug: false
 server.port: ${PORT:8080}
 
 # Spring Boot persistence config
@@ -51,8 +51,11 @@ blog:
   email: support@blogengine.com
   copyright: Александр Иванов
   copyrightFrom: 2021
-  serverTimeZone: ${SERVER_APP_AND_DB_TIMEZONE:Europe/Moscow}
+  serverTimeZone: ${SERVER_APP_AND_DB_TIMEZONE:Etc/UTC}
   captchaDeleteTimeout: 3600
   permittedTags: h1|h2|h3|h4|h5|h6|bold|strong|u|p|div|span|font|code|img
-  uploadDir: upload # загружаем в папку откуда запущено приложение
+  uploadFilesExtensions: JPG|JPEG|PNG
+  uploadDir: upload_dir # загружаем в папку откуда запущено приложение
+  uploadUrlPrefix: /upload # должен начинаться с /
   maxUploadSize: 5MB
+  cloudinaryUrl: ${CLOUDINARY_URL:}

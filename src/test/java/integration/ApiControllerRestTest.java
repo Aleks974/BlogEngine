@@ -35,7 +35,8 @@ import java.util.function.UnaryOperator;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = {Application.class, H2JpaConfig.class},
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "blog.cloudinaryUrl=")
 @Sql(scripts = {"classpath:testdbsql/V1_0__create_db_schema_tables.sql",
         "classpath:testdbsql/V1_1__add_foreign_keys.sql",
         "classpath:testdbsql/V1_2__insert_global_settings.sql",

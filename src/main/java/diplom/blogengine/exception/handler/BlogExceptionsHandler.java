@@ -245,8 +245,15 @@ public class BlogExceptionsHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(FileStorageException.class)
     protected ResponseEntity<Object> handleFileStorageException(FileStorageException ex, WebRequest request) {
         log.warn("enter to handleFileStorageException(), message: {}", ex.getMessage());
-
-        String msg = messageSource.getMessage(ex.getMessage(), null, request.getLocale());
+        if (ex.getCause() != null) {
+            log.error("cause error message: {}", ex.getCause().getMessage());
+        }
+        String msg;
+        if (ex.isMessageSourceKey()) {
+            msg = messageSource.getMessage(ex.getMessage(), null, request.getLocale());
+        } else {
+            msg = ex.getMessage();
+        }
         return ResponseEntity.badRequest()
                 .body(resultResponseMapper.failure(Map.of("image", msg)));
     }

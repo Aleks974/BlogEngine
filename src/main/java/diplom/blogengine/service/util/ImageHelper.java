@@ -4,14 +4,28 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Objects;
 
 @Slf4j
 public class ImageHelper {
 
-    public byte[] resizeImage(BufferedImage sourceImage, String imageFormat, int dW, int dH) throws IOException {
+    public byte[] resizeImage(byte[] sourceImageBytes, String imageFormat, int dW, int dH) throws IOException {
         log.debug("enter resizeImage()");
+
+        Objects.requireNonNull(sourceImageBytes);
+        Objects.requireNonNull(imageFormat);
+        if (dW <= 0 || dH <= 0 || imageFormat.isBlank()) {
+            throw new IllegalArgumentException("input params are invalid");
+        }
+
+        BufferedImage sourceImage;
+        try (ByteArrayInputStream imageStream = new ByteArrayInputStream(sourceImageBytes)) {
+            sourceImage = ImageIO.read(imageStream);
+        }
+        Objects.requireNonNull(sourceImage, "sourceImage is null");
 
         BufferedImage resizedImage = new BufferedImage(dW, dH, sourceImage.getType());
         int sW = sourceImage.getWidth();

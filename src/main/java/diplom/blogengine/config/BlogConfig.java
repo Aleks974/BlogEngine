@@ -1,6 +1,9 @@
 package diplom.blogengine.config;
 
 import diplom.blogengine.repository.*;
+import diplom.blogengine.service.CloudinaryFileStorageService;
+import diplom.blogengine.service.LocalFileStorageService;
+import diplom.blogengine.service.IFileStorageService;
 import diplom.blogengine.service.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
@@ -32,6 +35,11 @@ public class BlogConfig {
         }
         log.debug("app url: {}", blogProp.getSiteUrl());
 
+        String uploadUrlPrefix = blogProp.getUploadUrlPrefix();
+        if (!uploadUrlPrefix.startsWith("/")) {
+            throw new IllegalArgumentException("uploadUrlPrefix must start with /");
+        }
+
         return BlogSettings.builder()
                 .title(Objects.requireNonNull(blogProp.getTitle()))
                 .siteUrl(Objects.requireNonNull(blogProp.getSiteUrl()))
@@ -43,8 +51,11 @@ public class BlogConfig {
                 .serverTimeZone(timeZone)
                 .captchaDeleteTimeout(captchaDeleteTimeout)
                 .permittedTags(Objects.requireNonNull(blogProp.getPermittedTags()))
-                .uploadDir(Objects.requireNonNull(blogProp.getUploadDir()))
+                .uploadFilesExtensions(Objects.requireNonNull(blogProp.getUploadFilesExtensions()))
                 .maxUploadSize(Objects.requireNonNull(blogProp.getMaxUploadSize()))
+                .uploadDir(blogProp.getUploadDir())
+                .uploadUrlPrefix(uploadUrlPrefix)
+                .cloudinaryUrl(blogProp.getCloudinaryUrl())
                 .build();
     }
 
@@ -58,7 +69,6 @@ public class BlogConfig {
 //            System.out.println(s);
 //        }
     }
-
 
     @Bean
     public TimestampHelper timestampHelper(BlogSettings blogSettings) {
@@ -75,12 +85,10 @@ public class BlogConfig {
         return new ContentHelper(blogSettings.getPermittedTags());
     }
 
-
     @Bean
     public DdosAtackDefender ddosAtackDefender() throws Exception {
         return new DdosAtackDefender();
     }
-
 
     @Bean
     public ImageHelper imageHelper() throws Exception {
@@ -112,4 +120,15 @@ public class BlogConfig {
     public PostsCounterStorage postsCounterStorage() {
         return new PostsCounterStorage();
     }
+
+    @Bean
+    public IFileStorageService fileStorageService(BlogSettings blogSettings, ImageHelper imageHelper) {
+        String cloudinaryUrl = blogSettings.getCloudinaryUrl();
+        if (cloudinaryUrl != null && !cloudinaryUrl.isBlank()) {
+            return new CloudinaryFileStorageService(blogSettings, imageHelper);
+        } else {
+            return new LocalFileStorageService(blogSettings, imageHelper);
+        }
+    }
+
 }

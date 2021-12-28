@@ -4,11 +4,13 @@ import diplom.blogengine.api.request.GlobalSettingsRequest;
 import diplom.blogengine.api.request.UserProfileDataRequest;
 import diplom.blogengine.api.response.ResultResponse;
 import diplom.blogengine.api.response.StatisticsResponse;
+import diplom.blogengine.config.BlogSettings;
 import diplom.blogengine.model.GlobalSetting;
 import diplom.blogengine.model.SettingsCode;
 import diplom.blogengine.model.User;
 import diplom.blogengine.repository.CachedSettingsRepository;
 import diplom.blogengine.service.util.TimestampHelper;
+import diplom.blogengine.service.util.UriHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,6 +43,9 @@ public class ApiGeneralControllerRestTest extends ApiControllerRestTest {
 
     @Autowired
     PasswordEncoder passwordEncoder;
+
+    @Autowired
+    BlogSettings blogSettings;
 
     // /api/settings
 
@@ -262,16 +268,18 @@ public class ApiGeneralControllerRestTest extends ApiControllerRestTest {
         assertTrue(response.getResult());
 
         User updatedUser = entityManager.find(User.class, user3Id);
+        assertEquals(newName, updatedUser.getName());
         String photo = updatedUser.getPhoto();
         assertNotNull(photo);
 
         System.out.println(photo);
-        if (photo.startsWith("/")) {
+       /* if (photo.startsWith("/")) {
             photo = photo.substring(1);
-        }
-        assertTrue(Files.exists(Path.of(photo)));
-
-        assertEquals(newName, updatedUser.getName());
+        }*/
+        Path uploadDirRoot = Path.of(Objects.requireNonNull(blogSettings.getUploadDir(), "uploadDir is null"));
+        String uploadUrlPrefix = Objects.requireNonNull(blogSettings.getUploadUrlPrefix(), "uploadUrlPrefix is null");
+        Path photoPath = UriHelper.localPathFromUri(photo, uploadDirRoot, uploadUrlPrefix);
+        assertTrue(Files.exists(photoPath));
 
         clearTmpFile(tmpPhoto);
         clearTmpUploadDir();

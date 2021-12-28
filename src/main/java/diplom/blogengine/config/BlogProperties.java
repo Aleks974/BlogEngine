@@ -16,6 +16,9 @@ public class BlogProperties {
     private String serverTimeZone;
     private int captchaDeleteTimeout;
     private String permittedTags;
+    private String uploadFilesExtensions;
     private String uploadDir;
+    private String uploadUrlPrefix;
     private String maxUploadSize;
+    private String cloudinaryUrl;
 }

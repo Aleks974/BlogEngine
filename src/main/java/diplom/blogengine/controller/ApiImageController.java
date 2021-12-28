@@ -2,6 +2,7 @@ package diplom.blogengine.controller;
 
 import diplom.blogengine.security.IAuthenticationService;
 import diplom.blogengine.service.IFileStorageService;
+import diplom.blogengine.service.util.UriHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotNull;
+import java.nio.file.Path;
 
 @Slf4j
 @RestController
@@ -32,7 +34,6 @@ public class ApiImageController {
         }
         //String uri = ServletUriComponentsBuilder.fromCurrentContextPath().path("/upload/").path(imageFile.getName()).toUriString();
         String uri = fileStorageService.storeFile(imageFile, authService.getAuthenticatedUserId());
-
         return ResponseEntity.ok(uri);
     }
 

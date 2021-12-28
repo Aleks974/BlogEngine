@@ -163,22 +163,25 @@ public class PostService implements IPostService {
     }
 
     private Pageable getPageRequestWithSort(int offset, int limit, PostSortMode mode) {
-        log.debug("enter getPageRequest()");
+        log.debug("enter getPageRequestWithSort()");
+
+        int pageNumber = offset / limit;
 
         if (mode == PostSortMode.BEST || mode == PostSortMode.POPULAR) {
-            return getPageRequest(offset, limit);
+            return PageRequest.of(pageNumber, limit);
         } else {
             final String SORTING_FIELD_TIME = "time";
             Sort.Direction direction = Sort.Direction.DESC;
             if (mode == PostSortMode.EARLY) {
                 direction = Sort.Direction.ASC;
             }
-            return PageRequest.of(offset, limit, Sort.by(direction, SORTING_FIELD_TIME));
+            return PageRequest.of(pageNumber, limit, Sort.by(direction, SORTING_FIELD_TIME));
         }
     }
 
     private Pageable getPageRequest(int offset, int limit) {
-        return PageRequest.of(offset, limit);
+        int pageNumber = offset / limit;
+        return PageRequest.of(pageNumber, limit);
     }
 
     @Override

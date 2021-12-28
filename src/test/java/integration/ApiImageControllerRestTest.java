@@ -1,22 +1,29 @@
 package integration;
 
+import config.H2JpaConfig;
+import diplom.blogengine.Application;
 import diplom.blogengine.repository.CachedSettingsRepository;
 import diplom.blogengine.service.util.TimestampHelper;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.AssertionFailure;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.net.URI;
 import java.nio.file.*;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,10 +35,12 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
     @Autowired
     TimestampHelper timestampHelper;
 
+/*
     @AfterEach
     public void tearDown() throws IOException {
         clearTmpUploadDir();
     }
+*/
 
     // /api/image
 
@@ -47,6 +56,7 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
         assertEquals(HttpStatus.UNAUTHORIZED, responseEntity.getStatusCode());
 
         clearTmpFile(tmpFile);
+        clearTmpUploadDir();
     }
 
     @Test
@@ -56,14 +66,20 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
         int fileSize = 6 * 1024 * 1024;
         Path tmpFile = testDataGenerator.createTempFile(extension, fileSize);
 
-        assertThrows(ResourceAccessException.class, () ->{
+        /*assertThrows(ResourceAccessException.class, () ->{
             ResponseEntity<String> responseEntity = sendPostFile(tmpFile, cookie);
             assertNotNull(responseEntity);
-            assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-
+            assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
             System.out.println(responseEntity.getBody());
-        });
+        });*/
+
+        ResponseEntity<String> responseEntity = sendPostFile(tmpFile, cookie);
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+
         clearTmpFile(tmpFile);
+        clearTmpUploadDir();
+
     }
 
     @Test
@@ -79,6 +95,7 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
 
         System.out.println(responseEntity.getBody());
         clearTmpFile(tmpFile);
+        clearTmpUploadDir();
     }
 
     @Test
@@ -93,7 +110,14 @@ public class ApiImageControllerRestTest extends ApiControllerRestTest {
         assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
 
         System.out.println(responseEntity.getBody());
+        assertNotNull(responseEntity.getBody());
+
+        byte[] expected = Files.readAllBytes(tmpFile);
+        byte[] uploadedFileBytes = testRestTemplate.getForObject(host + responseEntity.getBody(), byte[].class);
+        assertTrue(Arrays.equals(expected, uploadedFileBytes));
+
         clearTmpFile(tmpFile);
+        clearTmpUploadDir();
     }
 
     // NOT TESTS //////////////////////////////////////////////////////////////////////////

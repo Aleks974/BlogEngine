@@ -69,25 +69,25 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        exposeDirectory(blogSettings.getUploadDir(), registry);
-    }
-
-    private void exposeDirectory(String dirName, ResourceHandlerRegistry registry) {
-        String resourcePattern = getResourcePattern(dirName);
-        String absolutePath = Path.of(dirName).toAbsolutePath().toString();
-        String resourceLocation = getResourceLocation(absolutePath);
-        log.debug("upload resourcePattern: {}, resourceLocation: {}", resourcePattern, resourceLocation);
-        registry.addResourceHandler(resourcePattern).addResourceLocations(resourceLocation);
-    }
-
-    private String getResourcePattern(String dirName) {
-        if (!dirName.startsWith("/")) {
-            dirName = "/".concat(dirName);
+        String uploadDir = blogSettings.getUploadDir();
+        String uploadUrlPrefix = blogSettings.getUploadUrlPrefix();
+        if (uploadDir != null && uploadUrlPrefix != null) {
+            String uploadResourcePattern = getResourcePattern(uploadUrlPrefix);
+            String resourceLocation = getResourceLocation(uploadDir);
+            registry.addResourceHandler(uploadResourcePattern).addResourceLocations(resourceLocation);
+            log.debug("upload resourcePattern: {}, resourceLocation: {}", uploadResourcePattern, resourceLocation);
         }
-        return  dirName.concat("/**");
     }
 
-    private String getResourceLocation(String absolutePath) {
+    private String getResourcePattern(String urlPrefix) {
+        if (!urlPrefix.endsWith("/")) {
+            urlPrefix = urlPrefix.concat("/");
+        }
+        return  urlPrefix.concat("**");
+    }
+
+    private String getResourceLocation(String dirName) {
+        String absolutePath = Path.of(dirName).toAbsolutePath().toString();
         String pathSeparator = File.separator;
         if (!absolutePath.endsWith(pathSeparator)) {
             absolutePath = absolutePath.concat(pathSeparator);

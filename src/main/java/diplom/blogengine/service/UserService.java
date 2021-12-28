@@ -17,15 +17,14 @@ import diplom.blogengine.repository.PasswordTokenRepository;
 import diplom.blogengine.repository.UserRepository;
 import diplom.blogengine.security.UserDetailsExt;
 import diplom.blogengine.service.util.MailHelper;
-import lombok.Builder;
+import diplom.blogengine.service.util.UriHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.http.HttpServletRequest;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -35,6 +34,8 @@ import java.util.regex.Pattern;
 public class UserService implements IUserService {
     private final static int MIN_PASSWORD_LENGTH = 6;
     private final static Pattern NAME_PATTERN = Pattern.compile("(?i)^[a-zA-Zа-яА-Я]+[a-zA-Zа-яА-Я.\\s]{2,}$");
+    private final static int PHOTO_WIDTH = 36;
+    private final static int PHOTO_HEIGHT = 36;
 
     private final BlogSettings blogSettings;
     private final UserRepository userRepository;
@@ -134,8 +135,8 @@ public class UserService implements IUserService {
             fileStorageService.deleteFile(updateUser.getPhoto());
             updateUser.setPhoto(null);
         } else if (userData.getPhotoFile() != null) {
-            String newPhoto = fileStorageService.storePhoto(userData.getPhotoFile(), authUserId);
-            updateUser.setPhoto(newPhoto);
+            String uri = fileStorageService.storeImage(userData.getPhotoFile(), authUserId, PHOTO_WIDTH, PHOTO_HEIGHT);
+            updateUser.setPhoto(uri);
         }
 
         if (doUpdateName) {
