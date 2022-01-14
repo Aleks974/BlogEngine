@@ -4,8 +4,8 @@ server.port: ${PORT:8080}
 # Spring Boot persistence config
 spring.datasource.driver-class-name: com.mysql.cj.jdbc.Driver
 spring.datasource.url: jdbc:${DB_URL:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8&serverTimezone=${blog.serverTimeZone}&useLegacyDatetimeCode=false}
-spring.datasource.username: blog
-spring.datasource.password: RbM8u$slkomV5
+spring.datasource.username: username
+spring.datasource.password: password
 spring.jpa.hibernate.ddl-auto: validate
 spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL8Dialect # spring.jpa.database-platform=org.hibernate.dialect.MySQL8Dialect
 spring.jpa.properties.hibernate.jdbc.time_zone: ${blog.serverTimeZone}
